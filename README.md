@@ -7,7 +7,7 @@ AgentSpring is a Python framework that provides everything you need to build, de
 ## Why Use AgentSpring?
 
 ### 🎯 **Efficient and Simple Codebase**
-AgentSpring helps you build agentic APIs with a concise and maintainable codebase, focusing on clarity and ease of use.
+AgentSpring is built to help you create agentic APIs with clear, maintainable code. The framework emphasizes simplicity, so you can focus on your application’s logic rather than boilerplate.
 
 ```python
 from agentspring.api import FastAPIAgent, standard_endpoints
@@ -65,6 +65,15 @@ summary = summarize(text, max_length=100)
 - **Multi-tenant SaaS** - Isolated customer environments
 
 ## 🚀 **Quick Start**
+
+> **Note:** For development and testing, install dependencies with:
+> ```bash
+> pip install -r test_requirements.txt
+> ```
+> For production, use:
+> ```bash
+> pip install -r requirements.txt
+> ```
 
 ### 1. **Clone & Setup**
 ```bash
@@ -243,7 +252,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 📄 **License**
 
-MIT License - see [LICENSE](LICENSE) for details.
+Apache 2.0 License - see [LICENSE](LICENSE) for details.
 
 ---
 
