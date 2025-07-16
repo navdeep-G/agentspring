@@ -40,11 +40,11 @@ api:
 # Run unit tests for agentspring
 # (You will need to add tests in agentspring/tests/)
 test:
-	.venv/bin/pytest agentspring/tests/
+	pytest agentspring/tests/
 
 # Run pytest for customer_support_agent example
 test_examples:
-	.venv/bin/pytest examples/customer_support_agent/tests/
+	pytest examples/customer_support_agent/tests/
 
 # Start Celery worker and FastAPI app in background, then run tests
 all:
