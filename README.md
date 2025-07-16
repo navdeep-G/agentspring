@@ -4,10 +4,10 @@
 
 AgentSpring is a Python framework that provides everything you need to build, deploy, and manage agentic APIs with minimal code and maximum functionality.
 
-## ✨ **What Makes AgentSpring Special**
+## Why Use AgentSpring?
 
-### 🎯 **90% Less Code**
-Build agentic APIs in **~60 lines** instead of 600+ lines:
+### 🎯 **Efficient and Simple Codebase**
+AgentSpring helps you build agentic APIs with a concise and maintainable codebase, focusing on clarity and ease of use.
 
 ```python
 from agentspring.api import FastAPIAgent, standard_endpoints
@@ -55,15 +55,6 @@ summary = summarize(text, max_length=100)
 - See `examples/starter_agent/` for a minimal template to start your own app.
 - See `examples/simple_agent/` for a concise, production-ready example (~60 lines).
 - See `examples/customer_support_agent/` for a full-featured, advanced example.
-
-## 📊 **Before vs After**
-
-| Feature | Traditional Approach | AgentSpring | Reduction |
-|---------|---------------------|-----------|-----------|
-| **Lines of Code** | 600+ | ~60 | **90%** |
-| **Setup Time** | Hours | Minutes | **95%** |
-| **Boilerplate** | High | Minimal | **85%** |
-| **Production Ready** | Manual | Automatic | **100%** |
 
 ## 🎯 **Perfect For**
 
