@@ -1,0 +1,2 @@
+[console_scripts]
+agentspring = agentspring.cli:main
