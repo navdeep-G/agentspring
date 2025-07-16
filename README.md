@@ -1,4 +1,4 @@
-# AgentSpring 🚀
+# AgentSpring
 
 **The fastest way to build production-ready agentic APIs**
 
