@@ -38,7 +38,7 @@ app = agent.get_app()
 - **API Versioning** - Backward-compatible API evolution
 - **Async Processing** - Celery task management (`@agentspring_task`)
 - **Batch Processing** - One-liner batch submission (`batch_process`)
-- **Observability** - Prometheus metrics, OpenTelemetry tracing
+- **Observability** - Request/response metrics, health checks, logging
 
 ### 🧠 **LLM Integration Made Simple**
 ```python
