@@ -1,7 +1,5 @@
 # AgentSpring
 
-**The fastest way to build production-ready agentic APIs**
-
 AgentSpring is a Python framework that provides everything you need to build, deploy, and manage agentic APIs with minimal code and maximum functionality.
 
 ## Why Use AgentSpring?
