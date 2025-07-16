@@ -6,12 +6,12 @@ here = pathlib.Path(__file__).parent.resolve()
 setup(
     name="agentspring",
     version="0.1.0",
-    description="A modular, extensible agentic API framework inspired by the spirit of Spring—growth, flexibility, and rapid development.",
+    description="A modular, extensible agentic API framework inspired with a focus on flexibility and rapid development.",
     long_description=(here / "README.md").read_text(),
     long_description_content_type="text/markdown",
-    url="https://github.com/YOUR_GITHUB_USERNAME/agentspring",  # Update this before publishing
+    url="https://github.com/navdeep-G/agentspring",  # Update this before publishing
     author="Your Name",
-    author_email="your.email@example.com",
+    author_email="mr.navdeepgill@gmail.com",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -43,7 +43,7 @@ setup(
         ],
     },
     project_urls={
-        "Documentation": "https://github.com/YOUR_GITHUB_USERNAME/agentspring",
-        "Source": "https://github.com/YOUR_GITHUB_USERNAME/agentspring",
+        "Documentation": "https://github.com/navdeep-G/agentspring",
+        "Source": "https://github.com/navdeep-G/agentspring",
     },
 ) 
