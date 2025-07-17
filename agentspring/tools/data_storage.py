@@ -14,14 +14,14 @@ from . import tool
 
 # Try to import optional dependencies
 try:
-    import PyPDF2
+    import PyPDF2  # type: ignore
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
 
 try:
-    from PIL import Image
-    import pytesseract
+    from PIL import Image  # type: ignore
+    import pytesseract  # type: ignore
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
@@ -187,7 +187,7 @@ def read_pdf(file_path: str):
 @tool("extract_text", "Extract text from a document using textract or fallback", permissions=[])
 def extract_text(file_path: str):
     try:
-        import textract
+        import textract  # type: ignore
         text = textract.process(file_path).decode('utf-8')
         return {"text": text, "file_path": file_path}
     except ImportError:

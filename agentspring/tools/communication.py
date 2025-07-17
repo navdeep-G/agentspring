@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import optional dependencies
 try:
-    from twilio.rest import Client
+    from twilio.rest import Client  # type: ignore
     TWILIO_AVAILABLE = True
 except ImportError:
     TWILIO_AVAILABLE = False

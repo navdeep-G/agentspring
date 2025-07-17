@@ -7,19 +7,19 @@ from . import tool
 
 # Try to import optional dependencies
 try:
-    import whisper
+    import whisper  # type: ignore
     WHISPER_AVAILABLE = True
 except ImportError:
     WHISPER_AVAILABLE = False
 
 try:
-    from PIL import Image
+    from PIL import Image  # type: ignore
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
 
 try:
-    import textract
+    import textract  # type: ignore
     TEXTRACT_AVAILABLE = True
 except ImportError:
     TEXTRACT_AVAILABLE = False
