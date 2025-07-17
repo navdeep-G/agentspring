@@ -1,6 +1,14 @@
 # Simple Agent Example
 
-This example demonstrates how **AgentFlow** makes it incredibly simple to build agentic APIs.
+This example demonstrates how **AgentSpring** makes it incredibly simple to build agentic APIs.
+
+## 🚀 New: Tool Registry System
+AgentSpring provides a registry of production-ready tools for common tasks (file ops, email, HTTP, etc). Example:
+```python
+from agentspring.tools import tool_registry
+result = tool_registry.execute_tool("read_file", file_path="README.md")
+print(result.result["content"])
+```
 
 ## 🎯 **What This Example Shows**
 

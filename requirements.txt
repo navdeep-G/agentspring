@@ -1,9 +1,21 @@
-fastapi>=0.95.0
-pydantic>=1.10.0
-celery>=5.2.0
-redis>=4.0.0
-uvicorn>=0.18.0
-requests>=2.25.0
-langchain-community
-langchain-core
-langchain-ollama
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+redis==5.0.1
+celery==5.3.4
+requests==2.31.0
+httpx==0.27.0
+langchain_community==0.0.36
+
+# Optional dependencies for real implementations
+psycopg2-binary==2.9.9
+PyPDF2==3.0.1
+Pillow==10.1.0
+pytesseract==0.3.10
+python-docx==1.1.0
+twilio==8.0.0
+google-api-python-client==2.108.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.2
+openai-whisper==20231117
+# textract==1.6.4  # BROKEN on PyPI due to dependency metadata, see https://github.com/deanmalmgren/textract/issues/360

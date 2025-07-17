@@ -1,31 +1,43 @@
 # 🚀 Quick Start Guide
 
-Get the SupportFlow Agent running in under 5 minutes!
+Get AgentSpring running in under 5 minutes!
+
+## ⚠️ Note on textract
+`textract` is currently broken on PyPI due to dependency metadata (see https://github.com/deanmalmgren/textract/issues/360). It is not included in requirements.txt. If you need it, install manually:
+
+```bash
+pip install --no-deps textract==1.6.4
+pip install extract-msg==0.28.7
+```
 
 ## Prerequisites
-
-- **Docker Desktop** installed and running
+- **Python 3.8+**
+- **Docker Desktop** (for full stack)
 - **Git** (to clone the repository)
 
 ## Step 1: Clone and Navigate
-
 ```bash
 git clone <your-repo-url>
-cd supportflow-agent
+cd agentspring
 ```
 
 ## Step 2: Start Everything
-
 ```bash
 ./start.sh
 ```
 
-That's it! 🎉 The script will:
-- Start all services (API, Ollama LLM, Redis, Celery Worker, Flower Dashboard)
-- Pull required AI models automatically
-- Set up the complete environment
+## Step 3: Use a Tool Out of the Box
+AgentSpring provides a registry of production-ready tools. For example, to read a file:
 
-## Step 3: Verify It's Working
+```python
+from agentspring.tools import tool_registry
+result = tool_registry.execute_tool("read_file", file_path="README.md")
+print(result.result["content"])
+```
+
+See the README for more tool examples and categories.
+
+## Step 4: Verify It's Working
 
 Wait about 2-3 minutes for everything to start, then check:
 
@@ -37,7 +49,7 @@ curl http://localhost:8000/health
 open http://localhost:8000/docs
 ```
 
-## Step 4: Test the API
+## Step 5: Test the API
 
 ### Quick Test (Recommended)
 ```bash

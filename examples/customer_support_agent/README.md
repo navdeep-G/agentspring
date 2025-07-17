@@ -26,4 +26,10 @@ This example is for backend API use only. AgentSpring itself is a backend server
   - One-liner LLM helpers: `classify`, `summarize`, `detect_priority`
   - Async and batch endpoints: `@agentspring_task`, `batch_process`, `standard_endpoints`
   - Tenant management: `tenant_router`
+- **New:** Use the tool registry for common tasks (file reading, email, etc):
+  ```python
+  from agentspring.tools import tool_registry
+  result = tool_registry.execute_tool("read_file", file_path="README.md")
+  print(result.result["content"])
+  ```
 - The app is loaded by AgentSpring via the `AGENTSPRING_APP` environment var 

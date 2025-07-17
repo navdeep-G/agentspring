@@ -2,6 +2,36 @@
 
 AgentSpring is a Python framework that provides everything you need to build, deploy, and manage agentic APIs with minimal code and maximum functionality.
 
+## ⚠️ Note on textract and pip 24.1+
+`textract` is currently broken on PyPI due to dependency metadata (see https://github.com/deanmalmgren/textract/issues/360). It is not included in requirements.txt. If you need it, install manually:
+
+```bash
+pip install --no-deps textract==1.6.4
+pip install extract-msg==0.28.7
+```
+
+## 🚀 New: Comprehensive Tool Registry System
+
+AgentSpring now includes a modular, extensible tool registry system with production-ready tools for:
+- Communication (Email, SMS, Slack, Discord)
+- Data & Storage (File ops, database, PDF, OCR, CSV, JSON)
+- Web & Search (HTTP, download)
+- Business (Calendar, CRM, user management, reports)
+- Media (Audio transcription, image analysis)
+- System/Admin (System info, logs, math, text, environment, shell commands, temp files)
+
+### Example: Use a Tool Out of the Box
+```python
+from agentspring.tools import tool_registry
+result = tool_registry.execute_tool("read_file", file_path="README.md")
+if result.success:
+    print(result.result["content"])
+else:
+    print("Error:", result.error)
+```
+
+See the [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md) for setup and configuration details.
+
 ## Why Use AgentSpring?
 
 ### 🎯 **Efficient and Simple Codebase**
