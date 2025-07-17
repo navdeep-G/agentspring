@@ -2,6 +2,16 @@
 
 AgentSpring is a Python framework that provides everything you need to build, deploy, and manage agentic APIs with minimal code and maximum functionality.
 
+## ⚠️ Note on textract and pip 24.1+
+If you need to use `textract`, you must install pip<24.1 first, because pip 24.1+ no longer supports legacy setup.py install packages:
+
+```bash
+python -m pip install "pip<24.1"
+pip install -r requirements.txt
+```
+
+This is required for `textract` and some other legacy packages. See the pip 24.1 release notes for details.
+
 ## 🚀 New: Comprehensive Tool Registry System
 
 AgentSpring now includes a modular, extensible tool registry system with production-ready tools for:

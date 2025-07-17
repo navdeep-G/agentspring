@@ -304,3 +304,12 @@ Users can:
 2. Configure the services you want to use
 3. Test with simple examples4ntegrate into your applications
 5. Customize as needed for your use case 
+
+## ⚠️ Troubleshooting: textract and pip 24.1+
+If you need to use `textract`, install pip<24.1 before installing requirements:
+
+```bash
+python -m pip install "pip<24.1"
+```
+
+This is required because pip 24.1+ no longer supports legacy setup.py install packages like textract. 

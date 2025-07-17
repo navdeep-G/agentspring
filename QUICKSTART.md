@@ -2,6 +2,15 @@
 
 Get AgentSpring running in under 5 minutes!
 
+## ⚠️ Note on textract and pip 24.1+
+If you need to use `textract`, install pip<24.1 before installing requirements:
+
+```bash
+python -m pip install "pip<24.1"
+```
+
+This is required because pip 24.1+ no longer supports legacy setup.py install packages like textract.
+
 ## Prerequisites
 - **Python 3.8+**
 - **Docker Desktop** (for full stack)
