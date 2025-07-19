@@ -99,7 +99,11 @@ class ToolRegistry:
                     error=f"Tool '{name}' not found",
                     execution_time=0.0
                 )
-            result = tool(**kwargs)
+            
+            # Validate and map parameters
+            validated_kwargs = self._validate_and_map_parameters(tool, kwargs)
+            
+            result = tool(**validated_kwargs)
             execution_time = (datetime.now() - start_time).total_seconds()
             return ToolExecutionResult(
                 success=True,
@@ -116,6 +120,49 @@ class ToolRegistry:
                 error=str(e),
                 execution_time=execution_time
             )
+
+    def _validate_and_map_parameters(self, tool: Callable, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and map parameters to match function signature"""
+        import inspect
+        sig = inspect.signature(tool)
+        param_names = list(sig.parameters.keys())
+        
+        # Common parameter name mappings
+        param_mappings = {
+            'is_prime': {'n': 'number', 'num': 'number', 'value': 'number'},
+            'calculate': {'expr': 'expression', 'calc': 'expression', 'formula': 'expression'},
+            'text_to_uppercase': {'input_text': 'text', 'input': 'text', 'string': 'text'},
+            'text_to_lowercase': {'input_text': 'text', 'input': 'text', 'string': 'text'},
+            'count_characters': {'input_text': 'text', 'input': 'text', 'string': 'text'},
+            'generate_random': {'min': 'min_value', 'max': 'max_value', 'start': 'min_value', 'end': 'max_value'},
+            'sum_range': {'start_num': 'start', 'end_num': 'end', 'from': 'start', 'to': 'end'},
+        }
+        
+        validated = {}
+        tool_name = tool.__name__
+        
+        for param_name, value in kwargs.items():
+            # Check if parameter name needs mapping
+            if tool_name in param_mappings and param_name in param_mappings[tool_name]:
+                mapped_name = param_mappings[tool_name][param_name]
+                if mapped_name in param_names:
+                    validated[mapped_name] = value
+                    continue
+            
+            # Direct parameter name match
+            if param_name in param_names:
+                validated[param_name] = value
+            else:
+                # Try to find a close match
+                for actual_param in param_names:
+                    if param_name.lower() in actual_param.lower() or actual_param.lower() in param_name.lower():
+                        validated[actual_param] = value
+                        break
+                else:
+                    # Log unknown parameter but don't fail
+                    logger.warning(f"Unknown parameter '{param_name}' for tool '{tool_name}'. Available: {param_names}")
+        
+        return validated
 
 # Global tool registry instance
 tool_registry = ToolRegistry()
