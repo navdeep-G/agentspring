@@ -6,6 +6,8 @@ This directory contains the CustomerSupportAgent, a production-ready customer su
 - Intelligent complaint classification, prioritization, summarization, and routing
 - Multi-tenancy, audit logging, and observability
 - Minimal code: async, batch, and tenant endpoints are registered with a single import or function call
+- Use of the tool registry for common tasks (file reading, email, etc)
+- **Agentic Orchestration**: Can be extended to use prompt-driven, multi-step workflows
 
 ## Note
 This example is for backend API use only. AgentSpring itself is a backend server framework and does not provide a UI by default.
@@ -26,10 +28,15 @@ This example is for backend API use only. AgentSpring itself is a backend server
   - One-liner LLM helpers: `classify`, `summarize`, `detect_priority`
   - Async and batch endpoints: `@agentspring_task`, `batch_process`, `standard_endpoints`
   - Tenant management: `tenant_router`
-- **New:** Use the tool registry for common tasks (file reading, email, etc):
-  ```python
-  from agentspring.tools import tool_registry
-  result = tool_registry.execute_tool("read_file", file_path="README.md")
-  print(result.result["content"])
-  ```
-- The app is loaded by AgentSpring via the `AGENTSPRING_APP` environment var 
+  - Tool registry for common operations
+
+## Orchestration (Agentic Workflows)
+You can use AgentSpring's orchestration system to automate multi-step support workflows:
+```python
+from agentspring.orchestration import create_orchestrator
+orchestrator = create_orchestrator()
+result = orchestrator.execute_prompt("Classify a support message, summarize it, and route to the right team.")
+print(result)
+```
+
+See the main [README](../../README.md) for more details and advanced usage. 

@@ -20,8 +20,13 @@ result = tool_registry.execute_tool("read_file", file_path="README.md")
 print(result.result["content"])
 ```
 
-## Minimal Workflow
-- Just write your business logic—AgentSpring handles async, batch, tenant, health, and metrics with a single import or function call.
-- For more advanced features, see:
-  - `examples/simple_agent/` for a concise, production-ready example
-  - `examples/customer_support_agent/` for a full-featured, advanced example 
+## Orchestration (Agentic Workflows)
+You can also use AgentSpring's orchestration system to turn natural language prompts into multi-step workflows:
+```python
+from agentspring.orchestration import create_orchestrator
+orchestrator = create_orchestrator()
+result = orchestrator.execute_prompt("Read the README file and summarize its content.")
+print(result)
+```
+
+See the main [README](../../README.md) for more details and advanced usage. 

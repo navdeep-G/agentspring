@@ -25,6 +25,10 @@ cd agentspring
 ```bash
 ./start.sh
 ```
+Or run directly:
+```bash
+python main.py
+```
 
 ## Step 3: Use a Tool Out of the Box
 AgentSpring provides a registry of production-ready tools. For example, to read a file:
@@ -35,9 +39,17 @@ result = tool_registry.execute_tool("read_file", file_path="README.md")
 print(result.result["content"])
 ```
 
-See the README for more tool examples and categories.
+## Step 4: Try Agentic Orchestration
+You can use natural language to orchestrate multi-step workflows:
 
-## Step 4: Verify It's Working
+```python
+from agentspring.orchestration import create_orchestrator
+orchestrator = create_orchestrator()
+result = orchestrator.execute_prompt("Read the README file, summarize it, and send the summary to Slack.")
+print(result)
+```
+
+## Step 5: Verify It's Working
 
 Wait about 2-3 minutes for everything to start, then check:
 
@@ -49,13 +61,12 @@ curl http://localhost:8000/health
 open http://localhost:8000/docs
 ```
 
-## Step 5: Test the API
+## Step 6: Test the API
 
 ### Quick Test (Recommended)
 ```bash
 python test_quickstart.py
 ```
-
 This will run comprehensive tests to verify everything is working correctly.
 
 ### Manual Test
@@ -86,7 +97,6 @@ Use this API key for testing:
 ```
 demo-key
 ```
-
 Include it in the `X-API-Key` header with all requests.
 
 ## 📊 Monitoring
@@ -94,71 +104,6 @@ Include it in the `X-API-Key` header with all requests.
 ```bash
 # View all logs
 docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f api
-docker-compose logs -f worker
-docker-compose logs -f ollama
 ```
 
-## 🛑 Stop the Services
-
-```bash
-docker-compose down
-```
-
-## 🧪 Run Tests
-
-```bash
-# Run comprehensive test suite
-python test_scenarios.py
-
-# Run unit tests
-python -m pytest tests/
-```
-
-## 🔧 Troubleshooting
-
-### Docker not running
-```bash
-# Start Docker Desktop first, then run:
-./start.sh
-```
-
-### Port conflicts
-If you get port conflicts, check what's using the ports:
-```bash
-# Check what's using port 8000
-lsof -i :8000
-
-# Check what's using port 5555
-lsof -i :5555
-```
-
-### Models not loading
-If the LLM models aren't loading properly:
-```bash
-# Pull models manually
-docker-compose exec ollama ollama pull llama3.2
-docker-compose exec ollama ollama pull mistral
-```
-
-### Services not healthy
-Check service status:
-```bash
-docker-compose ps
-```
-
-## 📚 Next Steps
-
-- Read the full [README.md](README.md) for detailed documentation
-- Explore the [API documentation](http://localhost:8000/docs) for all endpoints
-- Check out the [Flower dashboard](http://localhost:5555) for task monitoring
-- Run the test suite to verify everything is working
-
-## 🆘 Need Help?
-
-- Check the logs: `docker-compose logs -f`
-- Verify Docker is running: `docker info`
-- Ensure ports are available: `lsof -i :8000`
-- Restart everything: `docker-compose down && ./start.sh` 
+See the main [README](README.md) for more details and advanced usage. 

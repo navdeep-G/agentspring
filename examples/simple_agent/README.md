@@ -1,13 +1,22 @@
 # Simple Agent Example
 
-This example demonstrates how **AgentSpring** makes it incredibly simple to build agentic APIs.
+This example demonstrates how **AgentSpring** makes it incredibly simple to build agentic APIs and agentic workflows.
 
-## 🚀 New: Tool Registry System
+## 🚀 Tool Registry System
 AgentSpring provides a registry of production-ready tools for common tasks (file ops, email, HTTP, etc). Example:
 ```python
 from agentspring.tools import tool_registry
 result = tool_registry.execute_tool("read_file", file_path="README.md")
 print(result.result["content"])
+```
+
+## 🧠 Orchestration (Agentic Workflows)
+You can use AgentSpring's orchestration system to turn natural language prompts into multi-step workflows:
+```python
+from agentspring.orchestration import create_orchestrator
+orchestrator = create_orchestrator()
+result = orchestrator.execute_prompt("Read the README file and summarize its content.")
+print(result)
 ```
 
 ## 🎯 **What This Example Shows**
@@ -29,8 +38,8 @@ print(result.result["content"])
 ## 🚀 **How It Works**
 
 ```python
-from agentflow.api import FastAPIAgent
-from agentflow.llm import classify
+from agentspring.api import FastAPIAgent
+from agentspring.llm import classify
 
 agent = FastAPIAgent(title="Simple Agent")
 
@@ -52,24 +61,15 @@ async def classify_text(request):
 
 - **Prototyping**: Quick proof-of-concepts
 - **Simple Agents**: Basic classification/summarization
-- **Learning**: Understanding AgentFlow patterns
+- **Learning**: Understanding AgentSpring patterns
 - **Starting Point**: Building more complex agents (see `starter_agent` for a blank template)
 
 ## 📝 **Usage**
 
 ```bash
 # Set the environment variable to use this example
-export AGENTFLOW_APP=examples.simple_agent.endpoints
-
-# Start the server
-./start.sh
+export AGENTSPRING_APP=examples.simple_agent.endpoints
+python main.py
 ```
 
-## 🔗 **API Endpoints**
-
-- `POST /classify` - Classify text into categories
-- `POST /summarize` - Summarize text
-- `POST /analyze` - Comprehensive text analysis
-- `GET /health` - Health check (automatic)
-
-This example proves that **AgentFlow** makes building agentic APIs as simple as possible while maintaining all the production-ready features! 
+See the main [README](../../README.md) for more details and advanced usage. 
