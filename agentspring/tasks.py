@@ -9,6 +9,7 @@ from celery import Celery  # type: ignore
 from pydantic import BaseModel
 from functools import wraps
 import asyncio
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -202,3 +203,7 @@ def batch_process(celery_app: Celery, single_task_func: Callable, items: List[An
         result = AsyncTaskManager(celery_app).wait_for_task(task_id, timeout=timeout)
         results.append(result)
     return results 
+
+@shared_task(bind=True, name='test_error_task')
+def test_error_task(self, user='test-user'):
+    raise RuntimeError('This is a test error for logging.') 

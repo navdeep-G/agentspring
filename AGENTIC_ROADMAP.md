@@ -169,7 +169,7 @@ This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orche
 
 ---
 
-# 🏁 Suggested Build Order
+# Suggested Build Order
 
 1. Short-term memory & multi-turn context
 2. Goal/intent recognition and decomposition
@@ -193,29 +193,7 @@ This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orche
 
 ---
 
-## Example: What "100% Agentic" Looks Like
-
-> User: "Every Monday, download the latest sales data, validate it, and email me a summary. If there are anomalies, alert the finance team."
-> 
-> AgentSpring:
-> - Remembers this as a recurring goal
-> - Plans and executes the workflow every Monday
-> - Handles errors, retries, and notifies the right people
-> - Learns from feedback (e.g., "next time, also include a chart")
-> - Logs all actions and can explain its decisions
-> - **NEW:** Adapts the plan if the data source changes
-> - **NEW:** Creates a custom validation tool if needed
-> - **NEW:** Optimizes its own prompt templates based on success rates
-> - **NEW:** Asks for clarification if the data format is unexpected
-> - **NEW:** Refuses to share sensitive data without proper authorization
-> - **NEW:** Coordinates with other agents for complex tasks
-> - **NEW:** Provides transparent explanations for all decisions
-> - **NEW:** Continuously tests and validates its own behavior
-> - **NEW:** Deploys updates safely with rollback capabilities
-
----
-
-## **🎯 Complete Agentic System Checklist**
+## **Checklist**
 
 ### **Core Capabilities** ✅
 - [ ] Multi-turn dialogue and memory
@@ -247,5 +225,3 @@ This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orche
 - [ ] Human-agent collaboration
 - [ ] Testing and validation framework
 - [ ] Deployment and lifecycle management
-
-**When all items are checked, you'll have a truly 100% complete agentic system!**

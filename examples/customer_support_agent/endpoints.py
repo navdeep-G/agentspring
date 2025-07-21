@@ -10,8 +10,9 @@ from agentspring.tasks import AsyncTaskManager, batch_process
 from agentspring.celery_app import celery_app
 from agentspring.multi_tenancy import get_current_tenant, tenant_router, TenantConfig
 from agentspring.api_versioning import get_api_version, versioned_response
-from fastapi import Depends
+from fastapi import Depends, Request
 import uuid
+from agentspring.api import log_api_error
 
 # Initialize AgentSpring components
 agent = FastAPIAgent(title="Customer Support Agent", api_key_env="CUSTOMER_SUPPORT_AGENT_API_KEY")
@@ -84,6 +85,13 @@ async def analyze_complaints_batch(
         "status": "processing",
         "message": f"Batch analysis started for {len(requests)} complaints"
     }
+
+@agent.app.get('/test-error')
+@log_api_error
+def test_error_endpoint(request: Request):
+    user = getattr(request, 'user', 'test-user')
+    request_id = getattr(request, 'request_id', 'test-req')
+    raise ValueError('This is a test error for logging.')
 
 # Register standard async endpoints
 standard_endpoints(agent.app, task_manager)
