@@ -10,8 +10,32 @@ from fastapi import FastAPI, HTTPException, status, Header, Depends, APIRouter
 from fastapi.responses import JSONResponse
 import redis  # type: ignore
 from agentspring.tasks import AsyncTaskManager
+from .logging_config import setup_logging
+import logging
+from functools import wraps
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
+
+# Example: Centralized error handler for API endpoints
+def log_api_error(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            user = kwargs.get('user', 'unknown')
+            request_id = kwargs.get('request_id', 'unknown')
+            logger.error(
+                f"API error: {str(e)}",
+                extra={
+                    'user': user,
+                    'request_id': request_id,
+                    'error_type': type(e).__name__
+                }
+            )
+            # Optionally, re-raise or return a generic error response
+            raise
+    return wrapper
 
 class MetricsTracker:
     """Track API metrics in Redis"""
@@ -189,3 +213,11 @@ def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func:
             return {"task_id": task_id, "status": "processing"}
 
     app.include_router(router) 
+
+app = FastAPI()
+
+@log_api_error
+def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req'):
+    raise ValueError('This is a test error for logging.')
+
+app.add_api_route('/test-error', test_error_endpoint, methods=['GET']) 

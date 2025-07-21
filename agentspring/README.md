@@ -40,3 +40,23 @@ print(result)
 ```
 
 See the main [README](../README.md) for more details, examples, and the full roadmap. 
+
+## Centralized Error Handling & Structured Logging
+
+- All API endpoints and background tasks use centralized error handling and structured, JSON-formatted logs.
+- Logs include context: user, request/task ID, and error type.
+- Logs are stored in `logs/agentspring.log` with automatic rotation (max 10MB, 5 backups).
+
+### Usage
+- To add context to logs, pass `user` and `request_id` (for API) or `user` and `task_id` (for Celery) in the `extra` argument of logger calls.
+- API endpoints can use the `@log_api_error` decorator to automatically log uncaught exceptions with context.
+- Celery task failures are automatically logged with context.
+
+### Log Retention
+- The system keeps up to 5 rotated log files, each up to 10MB.
+- Old logs are automatically deleted.
+
+### Log Format
+- Logs are in JSON for easy searching and parsing.
+
+--- 
