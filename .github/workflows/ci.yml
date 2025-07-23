@@ -52,8 +52,20 @@ jobs:
           celery -A agentspring.celery_app.celery_app worker --loglevel=info &
           sleep 5
 
-      - name: Run core tests
-        run: pytest agentspring/tests/
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 agentspring/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 agentspring/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run tests with coverage
+        run: |
+          pip install pytest-cov
+          pytest --cov=agentspring --cov-report=xml --cov-report=term-missing agentspring/tests/
+
+      - name: Check coverage threshold
+        run: |
+          coverage report --fail-under=80
 
       - name: Run example tests
         run: make test_examples 

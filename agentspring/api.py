@@ -13,6 +13,12 @@ from agentspring.tasks import AsyncTaskManager
 from .logging_config import setup_logging
 import logging
 from functools import wraps
+import bleach
+from fastapi import Security, Depends
+from fastapi.security.api_key import APIKeyHeader
+from fastapi_permissions import Allow, Deny, Authenticated, Everyone, configure_permissions
+from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
 
 # Sentry integration
 import sentry_sdk
@@ -241,6 +247,18 @@ def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func:
 
 app = FastAPI()
 
+api_requests_total = Counter('api_requests_total', 'Total API requests', ['method', 'endpoint'])
+
+@app.middleware('http')
+async def prometheus_metrics_middleware(request: Request, call_next):
+    response = await call_next(request)
+    api_requests_total.labels(request.method, request.url.path).inc()
+    return response
+
+@app.get('/metrics')
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 @log_api_error
 def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
     raise ValueError('This is a test error for logging.')
@@ -250,12 +268,92 @@ app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
 # Add /task-status/{task_id} endpoint
 from agentspring.celery_app import celery_app
 from celery.result import AsyncResult
+from agentspring.audit import audit_log
 
-@app.get('/task-status/{task_id}')
+async_task_manager = AsyncTaskManager(celery_app)
+
+# RBAC: Define roles and permissions
+ROLES = {
+    'admin': [Allow, Authenticated],
+    'user': [Allow],
+    'guest': [Deny],
+}
+
+def get_current_role(x_role: str = Header('guest')):
+    return x_role
+
+def require_role(required_role: str):
+    def role_checker(role: str = Depends(get_current_role)):
+        if role != required_role:
+            raise HTTPException(status_code=403, detail='Forbidden: insufficient role')
+        return role
+    return role_checker
+
+@app.get('/tasks/{task_id}/status', dependencies=[Depends(AuthMiddleware()), Depends(require_role('user'))])
 def get_task_status(task_id: str):
-    result = AsyncResult(task_id, app=celery_app)
-    return {
-        'task_id': task_id,
-        'status': result.status,
-        'result': result.result if result.ready() else None
-    } 
+    return async_task_manager.get_task_status(task_id)
+
+@app.get('/tasks/{task_id}/result', dependencies=[Depends(AuthMiddleware()), Depends(require_role('user'))])
+def get_task_result(task_id: str):
+    status = async_task_manager.get_task_status(task_id)
+    if status['status'] == 'SUCCESS':
+        return {'result': status['result']}
+    elif status['status'] == 'FAILURE':
+        return {'error': status.get('error', 'Task failed')}
+    else:
+        return {'status': status['status']}
+
+@app.get('/health', tags=["Health"])
+def health():
+    try:
+        async_task_manager.metrics_tracker.redis_client.ping()
+        return {"status": "healthy"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+@app.get('/readiness', tags=["Health"])
+def readiness():
+    # Check if all critical services are up (e.g., Redis, Celery broker)
+    try:
+        async_task_manager.metrics_tracker.redis_client.ping()
+        # Add more checks as needed
+        return {"status": "ready"}
+    except Exception as e:
+        return {"status": "not ready", "error": str(e)}
+
+@app.get('/liveness', tags=["Health"])
+def liveness():
+    return {"status": "alive"}
+
+# Input sanitization utility
+def sanitize_input(data: str) -> str:
+    return bleach.clean(data)
+
+# Utility for data retention and privacy controls (stub)
+def enforce_data_retention():
+    # Implement data retention logic here
+    pass
+
+def enforce_privacy_controls():
+    # Implement privacy controls here
+    pass
+
+@app.middleware('http')
+async def audit_trail_middleware(request: Request, call_next):
+    if request.method in ['POST', 'PUT', 'DELETE']:
+        user = request.headers.get('x-api-key', 'unknown')
+        endpoint = request.url.path
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = None
+        audit_log('user_action', user=user, details={'endpoint': endpoint, 'method': request.method, 'payload': payload})
+    response = await call_next(request)
+    return response
+
+# Example usage in an endpoint:
+# @app.post('/secure-endpoint', dependencies=[Depends(require_role('admin'))])
+# async def secure_endpoint(payload: dict, user: str = Depends(get_current_role)):
+#     sanitized = {k: sanitize_input(v) if isinstance(v, str) else v for k, v in payload.items()}
+#     audit_log('secure_endpoint_called', user, sanitized)
+#     ... 

@@ -1,0 +1,11 @@
+Alembic Database Migrations
+==========================
+
+- Edit alembic.ini to set your database URL.
+- Place migration scripts in alembic/versions/.
+- To create a migration:
+    alembic revision --autogenerate -m "description"
+- To apply migrations:
+    alembic upgrade head
+- To downgrade:
+    alembic downgrade -1 

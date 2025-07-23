@@ -1,5 +1,7 @@
 import importlib
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from .logging_config import setup_logging
 
 DEFAULT_APP = os.environ.get("AGENTSPRING_APP", "examples.customer_support_agent.endpoints")

@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Add support for .env files
+COPY env.example .env
+ENV PYTHONUNBUFFERED=1
+
 # Copy the rest of the code
 COPY . .
 

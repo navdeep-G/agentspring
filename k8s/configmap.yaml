@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentspring-config
+  labels:
+    app: agentspring
+
+data:
+  AGENTSPRING_ENV: production
+  LOG_DIR: /logs
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0 
