@@ -8,25 +8,27 @@ from agentspring.logging_config import setup_logging
 import logging
 import socket
 
+# Sentry integration
+import sentry_sdk
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=0.0)
+
 # Check if Redis is running before starting Celery
-BROKER_URL = 'redis://localhost:6379/0'
+BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 try:
     sock = socket.create_connection(('localhost', 6379), timeout=2)
     sock.close()
 except Exception:
     raise RuntimeError('Redis server is not running on localhost:6379. Please start Redis to use Celery.')
 
-# Configure Celery
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
-# Create Celery app
-celery_app = Celery('agentspring', broker=BROKER_URL)
+celery_app = Celery('agentspring', broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
 celery_app.conf.update(
     imports=['agentspring.tasks']
 )
 
-# Celery configuration
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
@@ -41,7 +43,6 @@ celery_app.conf.update(
     result_expires=3600,  # 1 hour
 )
 
-# Logger
 logger = setup_logging()
 
 from celery import signals
@@ -56,4 +57,6 @@ def task_failure_handler(sender=None, task_id=None, exception=None, args=None, k
             'request_id': task_id,
             'error_type': type(exception).__name__
         }
-    ) 
+    )
+    if SENTRY_DSN:
+        sentry_sdk.capture_exception(exception) 

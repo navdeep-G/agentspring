@@ -207,3 +207,7 @@ def batch_process(celery_app: Celery, single_task_func: Callable, items: List[An
 @shared_task(bind=True, name='test_error_task')
 def test_error_task(self, user='test-user'):
     raise RuntimeError('This is a test error for logging.') 
+
+@shared_task(name='celery_health_check')
+def celery_health_check():
+    return {'status': 'ok'} 

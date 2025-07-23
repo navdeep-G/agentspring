@@ -6,13 +6,19 @@ import time
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, Callable
-from fastapi import FastAPI, HTTPException, status, Header, Depends, APIRouter
+from fastapi import FastAPI, HTTPException, status, Header, Depends, APIRouter, Request
 from fastapi.responses import JSONResponse
 import redis  # type: ignore
 from agentspring.tasks import AsyncTaskManager
 from .logging_config import setup_logging
 import logging
 from functools import wraps
+
+# Sentry integration
+import sentry_sdk
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=0.0)
 
 logger = setup_logging()
 
@@ -25,15 +31,18 @@ def log_api_error(func):
         except Exception as e:
             user = kwargs.get('user', 'unknown')
             request_id = kwargs.get('request_id', 'unknown')
+            tenant_id = kwargs.get('tenant_id', 'unknown')
             logger.error(
                 f"API error: {str(e)}",
                 extra={
                     'user': user,
                     'request_id': request_id,
+                    'tenant_id': tenant_id,
                     'error_type': type(e).__name__
                 }
             )
-            # Optionally, re-raise or return a generic error response
+            if SENTRY_DSN:
+                sentry_sdk.capture_exception(e)
             raise
     return wrapper
 
@@ -160,12 +169,28 @@ class FastAPIAgent:
         """Setup common error handlers"""
         
         @self.app.exception_handler(Exception)
-        async def global_exception_handler(request, exc):
+        async def global_exception_handler(request: Request, exc):
+            # User-friendly error response with error code
+            error_code = getattr(exc, 'code', 'INTERNAL_ERROR')
+            user_message = 'An unexpected error occurred.'
+            detail = str(exc)
+            logger.error(
+                f"API unhandled exception: {detail}",
+                extra={
+                    'user': getattr(request.state, 'user', 'unknown'),
+                    'request_id': getattr(request.state, 'request_id', 'unknown'),
+                    'tenant_id': getattr(request.state, 'tenant_id', 'unknown'),
+                    'error_type': type(exc).__name__
+                }
+            )
+            if SENTRY_DSN:
+                sentry_sdk.capture_exception(exc)
             return JSONResponse(
                 status_code=500,
                 content={
-                    "error": "Internal server error",
-                    "detail": str(exc),
+                    "error": user_message,
+                    "code": error_code,
+                    "detail": detail,
                     "timestamp": datetime.now().isoformat()
                 }
             )
@@ -217,7 +242,20 @@ def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func:
 app = FastAPI()
 
 @log_api_error
-def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req'):
+def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
     raise ValueError('This is a test error for logging.')
 
-app.add_api_route('/test-error', test_error_endpoint, methods=['GET']) 
+app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
+
+# Add /task-status/{task_id} endpoint
+from agentspring.celery_app import celery_app
+from celery.result import AsyncResult
+
+@app.get('/task-status/{task_id}')
+def get_task_status(task_id: str):
+    result = AsyncResult(task_id, app=celery_app)
+    return {
+        'task_id': task_id,
+        'status': result.status,
+        'result': result.result if result.ready() else None
+    } 

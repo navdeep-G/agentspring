@@ -20,3 +20,5 @@ google-auth-oauthlib==1.2.2
 openai-whisper==20231117
 # textract==1.6.4  # BROKEN on PyPI due to dependency metadata, see https://github.com/deanmalmgren/textract/issues/360
 python-json-logger
+sentry-sdk
+structlog

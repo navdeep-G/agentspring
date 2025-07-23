@@ -92,3 +92,35 @@ agentspring/
 
 ## 🏆 Why “AgentSpring”?
 The name **AgentSpring** draws inspiration from the renowned Spring framework in the Java ecosystem, celebrated for its modularity, extensibility, and developer productivity. Just as Spring enables rapid development and flexible architecture for Java applications, AgentSpring empowers developers to build robust, modular, and scalable agentic APIs and workflows with ease.
+
+## Environment Variables
+- `AGENTSPRING_ENV`: Application environment (development, staging, production)
+- `SENTRY_DSN`: Sentry DSN for error monitoring
+- `LOG_DIR`: Directory for log files
+- `CELERY_BROKER_URL`: Redis URL for Celery broker
+- `CELERY_RESULT_BACKEND`: Redis URL for Celery result backend
+- `API_KEY`: API authentication key
+- `TENANT_ID`: (if multi-tenancy is used)
+- ... (see .env.example for more)
+
+## Monitoring & Alerting
+- **Sentry**: Set `SENTRY_DSN` to enable error monitoring.
+- **Log Aggregation**: Forward logs to ELK, Loki, or Datadog using their agents or log shippers.
+
+## Error Response Format
+All errors return JSON with:
+```
+{
+  "error": "<user-friendly message>",
+  "code": "<error_code>",
+  "detail": "<developer detail, optional>",
+  "timestamp": "<ISO8601>"
+}
+```
+
+## Log Context Fields
+Each log entry includes:
+- `user`, `request_id`, `error_type`, `tenant_id`, `environment`, `hostname`
+
+## Security
+Sensitive data (passwords, tokens, secrets) is automatically scrubbed from logs.
