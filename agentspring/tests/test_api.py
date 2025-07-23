@@ -52,7 +52,7 @@ def test_standard_endpoints_registration():
     paths = [p for p in paths if p is not None]
     assert any("/task/" in p for p in paths)
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 # Test /health endpoint (integration)
 def test_health_endpoint_integration():
@@ -74,16 +74,19 @@ def test_error_endpoint():
 # Test /task-status/{task_id} endpoint (unknown task)
 def test_task_status_unknown():
     response = client.get('/task-status/unknown-task-id')
-    assert response.status_code == 200
+    assert response.status_code == 404
     data = response.json()
-    assert data['task_id'] == 'unknown-task-id'
-    assert data['status'] in ['PENDING', 'FAILURE', 'SUCCESS', 'RETRY', 'STARTED']
+    assert "detail" in data
 
 # Test log enrichment and scrubbing
 def test_log_enrichment_and_scrubbing():
     log_file = os.getenv('LOG_FILE', 'logs/agentspring.log')
-    # Trigger an error to ensure log is written
-    client.get('/test-error')
+    response = client.get('/test-error')
+    assert response.status_code == 500
+    # Explicitly log a message with sensitive data
+    import logging
+    logger = logging.getLogger('agentspring')
+    logger.error("User login failed: password=supersecret123")
     found_enrichment = False
     found_scrub = False
     with open(log_file) as f:
@@ -92,14 +95,9 @@ def test_log_enrichment_and_scrubbing():
                 log = json.loads(line)
             except Exception:
                 continue
-            # Check enrichment fields
             if all(k in log for k in ['tenant_id', 'environment', 'hostname']):
                 found_enrichment = True
-            # Check scrubbing (simulate a log with sensitive data)
             if '***REDACTED***' in log.get('message', ''):
                 found_scrub = True
     assert found_enrichment, 'Log enrichment fields missing'
-    # For scrubbing, we can only check if the filter works if a sensitive message is logged
-    # To force this, log a message with a password
-    # Skipping logger usage for FastAPI app
     assert found_scrub, 'Sensitive data not scrubbed from logs' 

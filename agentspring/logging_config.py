@@ -31,14 +31,19 @@ class ContextFilter(logging.Filter):
         return True
 
 class ScrubFilter(logging.Filter):
-    SENSITIVE_KEYS = ['password', 'token', 'secret', 'api_key', 'authorization']
+    SENSITIVE_KEYS = ['password', 'token', 'secret', 'api_key']
     MASK = '***REDACTED***'
     def filter(self, record):
-        msg = record.getMessage()
+        try:
+            msg = record.getMessage()
+        except TypeError:
+            # If formatting fails, skip scrubbing for this record
+            return True
         for key in self.SENSITIVE_KEYS:
-            if key in msg.lower():
-                msg = self._mask_key(msg, key)
+            if f"{key}=" in msg:
+                msg = self._scrub(msg, key)
         record.msg = msg
+        record.args = ()
         return True
     def _mask_key(self, msg, key):
         import re
@@ -51,6 +56,11 @@ class ScrubFilter(logging.Filter):
         for pat in patterns:
             msg = re.sub(pat, f'{key}={self.MASK}', msg, flags=re.IGNORECASE)
         return msg
+
+    def _scrub(self, msg, key):
+        import re
+        # Replace key=anything with key=***REDACTED***
+        return re.sub(rf"{key}=([^\s,;]+)", f"{key}=***REDACTED***", msg)
 
 def setup_logging():
     logger = logging.getLogger()
@@ -68,6 +78,10 @@ def setup_logging():
     # Add context and scrub filters globally
     logger.addFilter(ContextFilter())
     logger.addFilter(ScrubFilter())
+
+    # Add ScrubFilter to all handlers
+    for handler in logger.handlers:
+        handler.addFilter(ScrubFilter())
 
     # Optional: also log to console
     console = logging.StreamHandler()

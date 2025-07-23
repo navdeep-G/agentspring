@@ -89,8 +89,8 @@ async def analyze_complaints_batch(
 @agent.app.get('/test-error')
 @log_api_error
 def test_error_endpoint(request: Request):
-    user = getattr(request, 'user', 'test-user')
-    request_id = getattr(request, 'request_id', 'test-req')
+    user = request.headers.get('x-user', 'test-user')
+    request_id = request.headers.get('x-request-id', 'test-req')
     raise ValueError('This is a test error for logging.')
 
 # Register standard async endpoints
