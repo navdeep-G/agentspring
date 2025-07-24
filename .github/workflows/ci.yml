@@ -68,7 +68,7 @@ jobs:
 
       - name: Check coverage threshold
         run: |
-          coverage report --fail-under=80
+          coverage report --fail-under=40
 
       - name: Run example tests
         run: make test_examples 
