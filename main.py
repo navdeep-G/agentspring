@@ -1,5 +1,9 @@
-from agentspring.app_loader import load_app
+import os
+import importlib
 
-# Dynamically load the selected app (default: superflow_agent.endpoints)
-app_module = load_app()
-app = app_module.app 
+def load_app():
+    app_path = os.environ.get("AGENTSPRING_APP", "examples.customer_support_agent.endpoints")
+    module = importlib.import_module(app_path)
+    return getattr(module, "app")
+
+app = load_app() 

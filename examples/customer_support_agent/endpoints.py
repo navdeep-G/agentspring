@@ -13,10 +13,21 @@ from agentspring.api_versioning import get_api_version, versioned_response
 from fastapi import Depends, Request
 import uuid
 from agentspring.api import log_api_error
+from agentspring.metrics import setup_metrics, register_custom_metric
+from prometheus_client import Counter
 
 # Initialize AgentSpring components
 agent = FastAPIAgent(title="Customer Support Agent", api_key_env="CUSTOMER_SUPPORT_AGENT_API_KEY")
 task_manager = AsyncTaskManager(celery_app)
+
+# Example custom metric: count /analyze requests
+analyze_requests_total = Counter('analyze_requests_total', 'Total /analyze requests')
+
+def count_analyze_requests(request, response):
+    if request.url.path == '/analyze':
+        analyze_requests_total.inc()
+
+register_custom_metric(count_analyze_requests)
 
 ROUTING_MAP = {
     "Infrastructure": "DevOps Queue",
@@ -100,3 +111,4 @@ agent.app.include_router(tenant_router)
 
 # Get the FastAPI app instance
 app = agent.get_app()
+setup_metrics(app)

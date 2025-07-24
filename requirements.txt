@@ -22,3 +22,10 @@ openai-whisper==20231117
 python-json-logger
 sentry-sdk
 structlog
+python-dotenv
+bleach
+fastapi-permissions
+flake8
+pytest-cov
+alembic
+prometheus_client

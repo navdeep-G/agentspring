@@ -267,6 +267,44 @@ class ToolOrchestrator:
             "schemas": {name: schema.model_dump() for name, schema in schemas.items()}
         }
 
+class AgentOrchestrator:
+    """Interface for orchestrating agent runs and workflows."""
+    def __init__(self):
+        self.active_runs = {}
+
+    def start_run(self, agent_id, context):
+        run_id = f"run_{agent_id}_{len(self.active_runs)+1}"
+        self.active_runs[run_id] = {'agent_id': agent_id, 'context': context, 'actions': [], 'status': 'running'}
+        self.log_action(run_id, 'start', context)
+        return run_id
+
+    def log_action(self, run_id, action, details=None):
+        if run_id in self.active_runs:
+            self.active_runs[run_id]['actions'].append({'action': action, 'details': details})
+        # Also log to audit trail
+        from agentspring.api import audit_log
+        audit_log('agent_action', user=run_id, details={'action': action, 'details': details})
+
+    def pause_run(self, run_id):
+        if run_id in self.active_runs:
+            self.active_runs[run_id]['status'] = 'paused'
+            self.log_action(run_id, 'pause')
+
+    def inspect_run(self, run_id):
+        return self.active_runs.get(run_id, None)
+
+    def debug_run(self, run_id):
+        # Stub for debugging agent runs
+        run = self.active_runs.get(run_id, None)
+        if run:
+            return {'run_id': run_id, 'actions': run['actions'], 'context': run['context']}
+        return None
+
+    def end_run(self, run_id):
+        if run_id in self.active_runs:
+            self.log_action(run_id, 'end')
+            self.active_runs[run_id]['status'] = 'ended'
+
 orchestrator = ToolOrchestrator()
 
 def execute_prompt(prompt: str, context: Optional[Dict[str, Any]] = None) -> ChainExecutionResult:

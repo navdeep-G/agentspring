@@ -14,17 +14,10 @@ SENTRY_DSN = os.getenv('SENTRY_DSN')
 if SENTRY_DSN:
     sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=0.0)
 
-# Check if Redis is running before starting Celery
-BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-try:
-    sock = socket.create_connection(('localhost', 6379), timeout=2)
-    sock.close()
-except Exception:
-    raise RuntimeError('Redis server is not running on localhost:6379. Please start Redis to use Celery.')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
 
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-
-celery_app = Celery('agentspring', broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
+celery_app = Celery('agentspring', broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
 celery_app.conf.update(
     imports=['agentspring.tasks']
 )
