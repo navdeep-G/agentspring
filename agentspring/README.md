@@ -1,5 +1,7 @@
 # AgentSpring Framework
 
+> **Note:** This README is for framework contributors and advanced users. For general usage, setup, and high-level documentation, please see the main [README](../README.md).
+
 This directory contains the core framework code for AgentSpring.
 
 ## Core Modules
