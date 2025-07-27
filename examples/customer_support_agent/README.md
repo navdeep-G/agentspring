@@ -23,12 +23,18 @@ This directory contains the CustomerSupportAgent, a production-ready customer su
 - To build your own app, see the `examples/starter_agent/` directory for a minimal starting point.
 
 ## Web UI
-- The UI is available at [http://localhost:8000/ui/](http://localhost:8000/ui/)
+
+This app now uses an interactive UI powered by [H2O Wave](https://wave.h2o.ai/), implemented in `ui/wave_app.py`.
+
+- To launch the UI, start the app normally (the Wave UI will be served automatically if using Docker Compose or the default app entrypoint).
+- The UI is available at [http://localhost:10101](http://localhost:10101) by default (see your logs for confirmation).
 - Features:
-  - Submit support messages and see analysis
-  - Run async analysis and check task status
+  - Submit support messages and see real-time analysis results
+  - Run async analysis and watch task status updates live
   - Try prompt-driven agentic orchestration
   - View live Prometheus metrics
+
+**Note:** The old static `index.html` is no longer used or needed.
 
 ## Endpoints
 - `/analyze` (POST): Analyze a support message
