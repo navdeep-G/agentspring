@@ -5,10 +5,9 @@ import json
 import time
 from typing import Dict, Any, Optional
 from agentspring.celery_app import celery_app, logger
-from agentspring.tasks import agentspring_task, batch_process, AsyncTaskManager
+from agentspring.task_base import agentspring_task, batch_process, AsyncTaskManager
 from agentspring.llm import classify, detect_priority, summarize
 from agentspring.models import TaskResult
-from langchain_ollama import OllamaLLM
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
@@ -37,7 +36,7 @@ class ComplaintAnalysisResult(BaseModel):
     processing_time: Optional[float] = None
     timestamp: float
 
-@celery_app.task(bind=True, name="analyze_complaint")
+@celery_app.task(bind=True)
 @agentspring_task()
 def analyze_complaint_task(self, complaint_text: str, customer_id: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -46,6 +45,8 @@ def analyze_complaint_task(self, complaint_text: str, customer_id: Optional[str]
     # Use one-liner helpers
     category = classify(complaint_text, ["Infrastructure", "Account", "Billing", "Legal", "Other"])
     priority = detect_priority(complaint_text)
+    if not isinstance(priority, str):
+        priority = str(priority)
     summary = summarize(complaint_text, max_length=150)
     # Example routing/escalation logic (could be moved to agentspring)
     routed_to = {

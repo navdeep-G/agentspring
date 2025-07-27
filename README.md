@@ -98,6 +98,35 @@ agentspring/
 - Troubleshooting and FAQ sections in the README and TOOL_CONFIGURATION.md
 
 ## 🏆 Why “AgentSpring”?
+# Quickstart: Tenants in AgentSpring
+
+AgentSpring supports multi-tenancy out of the box. By default, only one tenant is created:
+- tenant_id: `default`
+- api_key: `demo-key`
+
+All API requests must use this tenant unless you create more via the admin API.
+
+**Example: Submit a complaint and poll for status**
+```sh
+curl -X POST http://localhost:8000/analyze_async \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: demo-key" \
+  -H "x-role: user" \
+  -d '{"customer_id": "default", "message": "My laptop is broken"}'
+
+curl -H "x-api-key: demo-key" -H "x-role: user" \
+  http://localhost:8000/tenants/default/tasks/<task_id>/status
+```
+
+To see all tenants:
+```sh
+curl -H "X-Admin-Key: admin-key" http://localhost:8000/tenants
+```
+
+To add more tenants, use the `/tenants` endpoint with your admin key.
+
+---
+
 The name **AgentSpring** draws inspiration from the renowned Spring framework in the Java ecosystem, celebrated for its modularity, extensibility, and developer productivity. Just as Spring enables rapid development and flexible architecture for Java applications, AgentSpring empowers developers to build robust, modular, and scalable agentic APIs and workflows with ease.
 
 ## Environment Variables

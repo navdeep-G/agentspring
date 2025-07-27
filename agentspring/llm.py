@@ -17,7 +17,8 @@ class LLMHelper:
     
     def __init__(self, model: str = "llama3.2", base_url: Optional[str] = None):
         """Initialize LLM with configurable model and base URL"""
-        self.base_url = base_url or "http://localhost:11434"
+        import os
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
         self.llm = Ollama(model=model, base_url=self.base_url)
         self.json_parser = JsonOutputParser()
     
@@ -107,12 +108,7 @@ class LLMHelper:
             except Exception as e:
                 if attempt == max_retries - 1:
                     logger.warning(f"LLM call failed after {max_retries} attempts: {e}")
-                    # Fallback to regex extraction
-                    if valid_options and response:
-                        for option in valid_options:
-                            if re.search(option, response, re.IGNORECASE):
-                                return option
-                    return default
+                    raise
                 logger.warning(f"LLM call failed, attempt {attempt + 1}/{max_retries}: {e}")
         
         return default

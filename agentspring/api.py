@@ -160,8 +160,8 @@ class HealthEndpoint:
                 raise HTTPException(status_code=503, detail="Service unhealthy")
 
 class FastAPIAgent:
-    """Base FastAPI agent class with common functionality"""
-    
+    """Base FastAPI agent class with all AgentSpring standard endpoints pre-registered.
+    Users should only add their own endpoints to self.app or agent.get_app()."""
     def __init__(self, title: str = "AgentSpring Agent", api_key_env: str = "API_KEY"):
         self.app = FastAPI(title=title)
         self.metrics_tracker = MetricsTracker()
@@ -170,6 +170,63 @@ class FastAPIAgent:
         
         # Setup common middleware and error handlers
         self._setup_error_handlers()
+        # Register all standard endpoints
+        self._register_standard_endpoints()
+
+    def _register_standard_endpoints(self):
+        # RBAC: Define roles and permissions
+        ROLES = {
+            'admin': [Allow, Authenticated],
+            'user': [Allow],
+            'guest': [Deny],
+        }
+        def get_current_role(x_role: str = Header('guest')):
+            return x_role
+        def require_role(required_role: str):
+            def role_checker(role: str = Depends(get_current_role)):
+                if role != required_role:
+                    raise HTTPException(status_code=403, detail='Forbidden: insufficient role')
+                return role
+            return role_checker
+        # Standard endpoints
+        @self.app.get('/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+        def get_task_status(task_id: str):
+            status = async_task_manager.get_task_status(task_id)
+            return status
+        @self.app.get('/tasks/{task_id}/result', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+        def get_task_result(task_id: str):
+            status = async_task_manager.get_task_status(task_id)
+            if status['status'] == 'SUCCESS':
+                return {'result': status['result']}
+            elif status['status'] == 'FAILURE':
+                return {'error': status.get('error', 'Task failed')}
+            else:
+                return {'status': status['status']}
+        @self.app.get('/tenants/{tenant_id}/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+        def get_tenant_task_status(tenant_id: str, task_id: str, x_api_key: str = Header(...)):
+            tenant = tenant_manager.get_tenant_by_id(tenant_id)
+            if not tenant:
+                raise HTTPException(status_code=404, detail="Tenant not found. By default, only tenant_id='default' exists. See /tenants for available tenants.")
+            if not tenant.active:
+                raise HTTPException(status_code=403, detail='Tenant is inactive')
+            if tenant.api_key != x_api_key:
+                raise HTTPException(status_code=401, detail='Invalid API key for tenant')
+            return async_task_manager.get_task_status(task_id)
+        @self.app.get('/health', tags=["Health"])
+        def health():
+            try:
+                async_task_manager.metrics_tracker.redis_client.ping()
+                return {"status": "healthy"}
+            except Exception as e:
+                return {"status": "unhealthy", "error": str(e)}
+        @self.app.get('/readiness')
+        def readiness():
+            # Add readiness logic as needed
+            return {"status": "ready"}
+        @self.app.get('/liveness')
+        def liveness():
+            return {"status": "alive"}
+        # Add any other standard endpoints here
     
     def _setup_error_handlers(self):
         """Setup common error handlers"""
@@ -245,30 +302,32 @@ def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func:
 
     app.include_router(router) 
 
-app = FastAPI()
+# Remove global app instance. All endpoints are now registered via FastAPIAgent.
 
 api_requests_total = Counter('api_requests_total', 'Total API requests', ['method', 'endpoint'])
 
-@app.middleware('http')
-async def prometheus_metrics_middleware(request: Request, call_next):
-    response = await call_next(request)
-    api_requests_total.labels(request.method, request.url.path).inc()
-    return response
+# @app.middleware('http')
+# async def prometheus_metrics_middleware(request: Request, call_next):
+#     response = await call_next(request)
+#     api_requests_total.labels(request.method, request.url.path).inc()
+#     return response
 
-@app.get('/metrics')
-def metrics():
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+# @app.get('/metrics')
+# def metrics():
+#     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-@log_api_error
-def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
-    raise ValueError('This is a test error for logging.')
+# @log_api_error
+# def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
+#     raise ValueError('This is a test error for logging.')
 
-app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
+# app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
 
 # Add /task-status/{task_id} endpoint
 from agentspring.celery_app import celery_app
 from celery.result import AsyncResult
 from agentspring.audit import audit_log
+from agentspring.multi_tenancy import tenant_manager, TenantConfig
+from fastapi import HTTPException
 
 async_task_manager = AsyncTaskManager(celery_app)
 
@@ -289,41 +348,6 @@ def require_role(required_role: str):
         return role
     return role_checker
 
-@app.get('/tasks/{task_id}/status', dependencies=[Depends(AuthMiddleware()), Depends(require_role('user'))])
-def get_task_status(task_id: str):
-    return async_task_manager.get_task_status(task_id)
-
-@app.get('/tasks/{task_id}/result', dependencies=[Depends(AuthMiddleware()), Depends(require_role('user'))])
-def get_task_result(task_id: str):
-    status = async_task_manager.get_task_status(task_id)
-    if status['status'] == 'SUCCESS':
-        return {'result': status['result']}
-    elif status['status'] == 'FAILURE':
-        return {'error': status.get('error', 'Task failed')}
-    else:
-        return {'status': status['status']}
-
-@app.get('/health', tags=["Health"])
-def health():
-    try:
-        async_task_manager.metrics_tracker.redis_client.ping()
-        return {"status": "healthy"}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
-
-@app.get('/readiness', tags=["Health"])
-def readiness():
-    # Check if all critical services are up (e.g., Redis, Celery broker)
-    try:
-        async_task_manager.metrics_tracker.redis_client.ping()
-        # Add more checks as needed
-        return {"status": "ready"}
-    except Exception as e:
-        return {"status": "not ready", "error": str(e)}
-
-@app.get('/liveness', tags=["Health"])
-def liveness():
-    return {"status": "alive"}
 
 # Input sanitization utility
 def sanitize_input(data: str) -> str:
@@ -338,18 +362,6 @@ def enforce_privacy_controls():
     # Implement privacy controls here
     pass
 
-@app.middleware('http')
-async def audit_trail_middleware(request: Request, call_next):
-    if request.method in ['POST', 'PUT', 'DELETE']:
-        user = request.headers.get('x-api-key', 'unknown')
-        endpoint = request.url.path
-        try:
-            payload = await request.json()
-        except Exception:
-            payload = None
-        audit_log('user_action', user=user, details={'endpoint': endpoint, 'method': request.method, 'payload': payload})
-    response = await call_next(request)
-    return response
 
 # Example usage in an endpoint:
 # @app.post('/secure-endpoint', dependencies=[Depends(require_role('admin'))])

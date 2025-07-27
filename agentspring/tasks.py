@@ -11,6 +11,7 @@ from functools import wraps
 import asyncio
 from celery import shared_task
 from agentspring.audit import audit_log
+from agentspring.task_base import agentspring_task, batch_process, AsyncTaskManager
 
 logger = logging.getLogger(__name__)
 

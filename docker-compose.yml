@@ -1,5 +1,14 @@
-version: '3.8'
 services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "true"]
+    restart: unless-stopped
+
   app:
     build: .
     command: uvicorn agentspring.api:app --host 0.0.0.0 --port 8000
@@ -8,6 +17,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      ollama:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -23,6 +34,8 @@ services:
     env_file:
       - .env
     depends_on:
+      ollama:
+        condition: service_healthy
       redis:
         condition: service_healthy
     deploy:
@@ -36,3 +49,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5 
+
+volumes:
+  ollama-data:
