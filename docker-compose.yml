@@ -16,6 +16,8 @@ services:
       - .env
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     depends_on:
       ollama:
         condition: service_healthy
@@ -33,6 +35,8 @@ services:
     command: celery -A agentspring.celery_app.celery_app worker --loglevel=info
     env_file:
       - .env
+    volumes:
+      - .:/app
     depends_on:
       ollama:
         condition: service_healthy

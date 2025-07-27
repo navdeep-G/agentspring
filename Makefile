@@ -9,8 +9,8 @@ help:
 	@echo "Available targets:"
 	@echo "  redis     Start Redis server (requires redis-server in PATH)"
 	@echo "  ollama    Start Ollama server (requires ollama in PATH)"
-	@echo "  celery    Start Celery worker for customer_support_agent"
-	@echo "  api       Start FastAPI app for customer_support_agent"
+	
+	
 	@echo "  test      Run pytest for customer_support_agent example"
 	@echo "  all       Start all services (except Redis/Ollama) and run tests"
 	@echo "  clean     Remove build, dist, __pycache__, *.pyc, egg-info"
@@ -30,11 +30,11 @@ ollama:
 	ollama serve &
 
 # Start Celery worker for customer_support_agent
-celery:
-	.venv/bin/celery -A examples.customer_support_agent.tasks worker --loglevel=info
+
+	.venv/bin/celery -A  worker --loglevel=info
 
 # Start FastAPI app for customer_support_agent
-api:
+
 	.venv/bin/uvicorn examples.customer_support_agent.endpoints:agent.app --reload
 
 # Run unit tests for agentspring
@@ -43,17 +43,16 @@ test:
 	pytest agentspring/tests/
 
 # Run pytest for customer_support_agent example
-test_examples:
-	pytest examples/customer_support_agent/tests/
 
+	pytest 
 # Start Celery worker and FastAPI app in background, then run tests
 all:
 	@echo "Starting Celery worker and FastAPI app in background, then running tests..."
-	( .venv/bin/celery -A examples.customer_support_agent.tasks worker --loglevel=info & )
+	( .venv/bin/celery -A  worker --loglevel=info & )
 	sleep 5
-	( .venv/bin/uvicorn examples/customer_support_agent.endpoints:agent.app --reload & )
+	( .venv/bin/uvicorn  --reload & )
 	sleep 5
-	.venv/bin/pytest examples/customer_support_agent/tests/
+	.venv/bin/pytest 
 
 # Remove build artifacts and caches
 clean:

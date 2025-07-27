@@ -5,7 +5,11 @@ from agentspring.api import FastAPIAgent, MetricsTracker, AuthMiddleware, Health
 from unittest.mock import MagicMock
 import os
 import json
-from examples.customer_support_agent.endpoints import app
+from fastapi import FastAPI
+app = FastAPI()
+@app.get("/test")
+def test():
+    return {"message": "Test endpoint"}
 
 
 def test_fastapiagent_creation():

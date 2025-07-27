@@ -20,7 +20,7 @@ python main.py
 ```
 To run a specific example agent:
 ```bash
-export AGENTSPRING_APP=examples.customer_support_agent.endpoints
+export AGENTSPRING_APP=examples..endpoints
 python main.py
 ```
 
@@ -74,16 +74,16 @@ agentspring/
 │   ├── celery_app.py           # Celery configuration
 │   ├── multi_tenancy.py        # Multi-tenant support
 │   └── api_versioning.py       # API versioning
-├── examples/
-│   ├── customer_support_agent/ # Full-featured example (advanced)
-│   ├── simple_agent/           # Concise, production-ready example
-│   └── starter_agent/          # Minimal template for new apps
+├── 
+│   ├── / # Full-featured example (advanced)
+│   ├── /           # Concise, production-ready example
+│   └── /          # Minimal template for new apps
 ```
 
-## 🌟 Example Apps
-- See `examples/starter_agent/` for a minimal template to start your own app.
-- See `examples/simple_agent/` for a concise, production-ready example (~60 lines).
-- See `examples/customer_support_agent/` for a full-featured, advanced example.
+## 🌟 Custom Apps
+- See `/` for a minimal template to start your own app.
+- See `/` for a concise, production-ready example (~60 lines).
+- See `/` for a full-featured, advanced example.
 
 ## 📝 Documentation
 - [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
@@ -94,7 +94,7 @@ agentspring/
 
 - Up-to-date README and quickstart guides
 - API docs available at `/docs` (Swagger UI) and `/redoc`
-- Example apps in the `examples/` directory
+- Create custom apps in the `` directory
 - Troubleshooting and FAQ sections in the README and TOOL_CONFIGURATION.md
 
 ## 🏆 Why “AgentSpring”?
@@ -106,7 +106,7 @@ AgentSpring supports multi-tenancy out of the box. By default, only one tenant i
 
 All API requests must use this tenant unless you create more via the admin API.
 
-**Example: Submit a complaint and poll for status**
+**Example: Submit a task and poll for status**
 ```sh
 curl -X POST http://localhost:8000/analyze_async \
   -H "Content-Type: application/json" \
