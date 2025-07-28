@@ -1,6 +1,10 @@
 # AgentSpring Framework
 
-> **Note:** This README is for framework contributors and advanced users. For general usage, setup, and high-level documentation, please see the main [README](../README.md).
+> **Start here if new:**
+> - [Main README](../README.md) — Overview, setup, and project structure
+> - [Quickstart Guide](../QUICKSTART.md) — Fast onboarding and usage
+
+> **Note:** This README is for framework contributors and advanced users. For general usage, setup, and high-level documentation, see the above links.
 
 This directory contains the core framework code for AgentSpring.
 
@@ -41,6 +45,19 @@ result = orchestrator.execute_prompt(user_prompt)
 print(result)
 ```
 
+### Advanced: Tool Chaining & Custom Workflows
+```python
+from agentspring.orchestration import create_orchestrator
+from agentspring.tools import tool_registry
+
+orchestrator = create_orchestrator()
+user_prompt = "Read the latest log file, summarize errors, and send a Slack alert if any critical errors are found."
+plan = orchestrator.parse_prompt(user_prompt)
+for step in plan:
+    tool_result = tool_registry.execute_tool(step["tool"], **step["args"])
+    print(tool_result)
+```
+
 See the main [README](../README.md) for more details, examples, and the full roadmap. 
 
 ## Centralized Error Handling & Structured Logging
@@ -61,4 +78,11 @@ See the main [README](../README.md) for more details, examples, and the full roa
 ### Log Format
 - Logs are in JSON for easy searching and parsing.
 
---- 
+---
+
+## How to Extend the Framework
+- Add new tools to `agentspring/tools/` and register them with the tool registry.
+- Add new orchestration strategies in `orchestration.py`.
+- Extend models and validation in `models.py`.
+- See [TOOL_CONFIGURATION.md](../TOOL_CONFIGURATION.md) for environment variables and security practices.
+- For onboarding, see the [Quickstart Guide](../QUICKSTART.md).
