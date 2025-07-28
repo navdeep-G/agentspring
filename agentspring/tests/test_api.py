@@ -36,8 +36,6 @@ async def custom_exception_handler(request: Request, exc: Exception):
     )
 
 @app.get("/test-error")
-def test_error_endpoint():
-    raise Exception("An unexpected error occurred.")
 
 
 
