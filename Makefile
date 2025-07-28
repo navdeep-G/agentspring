@@ -1,7 +1,7 @@
 .PHONY: help redis ollama celery api test test_examples all clean install venv lint format stop restart
 
 # Default environment variables
-export CUSTOMER_SUPPORT_AGENT_API_KEY=demo-key
+export AGENT_API_KEY=demo-key
 export CELERY_BROKER_URL=redis://localhost:6379/0
 export CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
@@ -11,7 +11,7 @@ help:
 	@echo "  ollama    Start Ollama server (requires ollama in PATH)"
 	
 	
-	@echo "  test      Run pytest for customer_support_agent example"
+	@echo "  test      Run unit tests"
 	@echo "  all       Start all services (except Redis/Ollama) and run tests"
 	@echo "  clean     Remove build, dist, __pycache__, *.pyc, egg-info"
 	@echo "  install   Install Python requirements in .venv"
@@ -29,13 +29,9 @@ redis:
 ollama:
 	ollama serve &
 
-# Start Celery worker for customer_support_agent
+# Start Celery worker
 
 	.venv/bin/celery -A  worker --loglevel=info
-
-# Start FastAPI app for customer_support_agent
-
-	.venv/bin/uvicorn examples.customer_support_agent.endpoints:agent.app --reload
 
 # Run unit tests for agentspring
 # (You will need to add tests in agentspring/tests/)
@@ -51,9 +47,6 @@ test:
 	@echo "[Test] Running pytest..."
 	pytest agentspring/tests/ --maxfail=3 --disable-warnings -v
 
-# Run pytest for customer_support_agent example
-
-	pytest 
 # Start Celery worker and FastAPI app in background, then run tests
 all:
 	@echo "Starting Celery worker and FastAPI app in background, then running tests..."
