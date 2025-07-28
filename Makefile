@@ -40,7 +40,16 @@ ollama:
 # Run unit tests for agentspring
 # (You will need to add tests in agentspring/tests/)
 test:
-	pytest agentspring/tests/
+	@echo "[Test] Ensuring Redis is running..."
+	@if ! lsof -i :6379 | grep LISTEN > /dev/null; then \
+		echo "[Test] Starting Redis server in background..."; \
+		redis-server & \
+		sleep 2; \
+	else \
+		echo "[Test] Redis is already running."; \
+	fi
+	@echo "[Test] Running pytest..."
+	pytest agentspring/tests/ --maxfail=3 --disable-warnings -v
 
 # Run pytest for customer_support_agent example
 
