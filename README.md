@@ -80,11 +80,6 @@ agentspring/
 │   └── /          # Minimal template for new apps
 ```
 
-## 🌟 Custom Apps
-- See `/` for a minimal template to start your own app.
-- See `/` for a concise, production-ready example (~60 lines).
-- See `/` for a full-featured, advanced example.
-
 ## 📝 Documentation
 - [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
 - [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md): Roadmap to a fully agentic system
