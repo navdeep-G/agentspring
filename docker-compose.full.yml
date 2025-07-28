@@ -16,11 +16,12 @@ services:
       timeout: 10s
       retries: 5
     volumes:
+      - .:/app
       - ./logs:/logs
 
   celery_worker:
     build: .
-    command: celery -A agentspring.celery_app.celery_app worker --loglevel=info
+    command: celery -A examples.customer_support_agent.tasks worker --loglevel=info
     env_file:
       - .env
     depends_on:

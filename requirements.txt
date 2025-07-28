@@ -5,7 +5,9 @@ redis==5.0.1
 celery==5.3.4
 requests==2.31.0
 httpx==0.27.0
-langchain_community==0.0.36
+# Compatible langchain ecosystem versions
+langchain-core==0.1.48
+langchain-community==0.0.21
 
 # Optional dependencies for real implementations
 psycopg2-binary==2.9.9

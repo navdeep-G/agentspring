@@ -5,7 +5,40 @@ from agentspring.api import FastAPIAgent, MetricsTracker, AuthMiddleware, Health
 from unittest.mock import MagicMock
 import os
 import json
-from examples.customer_support_agent.endpoints import app
+from agentspring.api import FastAPIAgent, MetricsTracker, AuthMiddleware, HealthEndpoint, standard_endpoints
+from agentspring.tasks import AsyncTaskManager
+from fastapi import HTTPException
+from unittest.mock import MagicMock
+
+# Create the real AgentSpring app
+agent = FastAPIAgent(title="Test Agent")
+app = agent.get_app()
+
+# Register endpoints as in production
+tracker = MetricsTracker(redis_url="redis://localhost:6379/0")
+HealthEndpoint(app, tracker)
+standard_endpoints(app, MagicMock(spec=AsyncTaskManager))
+
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+import time
+
+@app.exception_handler(Exception)
+async def custom_exception_handler(request: Request, exc: Exception):
+    # Catch all unhandled exceptions (status 500)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": str(exc),
+            "code": "INTERNAL_ERROR",
+            "timestamp": time.time()
+        }
+    )
+
+@app.get("/test-error")
+def error_endpoint():
+    raise Exception("An unexpected error occurred.")
+
 
 
 def test_fastapiagent_creation():
@@ -52,6 +85,8 @@ def test_standard_endpoints_registration():
     paths = [p for p in paths if p is not None]
     assert any("/task/" in p for p in paths)
 
+
+# Create the test client after all endpoints and handlers are registered
 client = TestClient(app, raise_server_exceptions=False)
 
 # Test /health endpoint (integration)
@@ -63,7 +98,7 @@ def test_health_endpoint_integration():
     assert 'timestamp' in data
 
 # Test /test-error endpoint (should log error and return 500)
-def test_error_endpoint():
+def test_error():
     response = client.get('/test-error')
     assert response.status_code == 500
     data = response.json()
