@@ -25,11 +25,12 @@ cd agentspring
 ```bash
 ./start.sh
 ```
-Or run directly:
+Or run directly (ensure Redis is running):
 ```bash
 python main.py
 ```
 
+> **Tip:** If you see Redis connection errors, start Redis with `docker-compose up redis` or ensure your local Redis server is running.
 ## Step 3: Use a Tool Out of the Box
 AgentSpring provides a registry of production-ready tools. For example, to read a file:
 
@@ -65,9 +66,12 @@ open http://localhost:8000/docs
 
 ### Quick Test (Recommended)
 ```bash
-python test_quickstart.py
+make test
 ```
-This will run comprehensive tests to verify everything is working correctly.
+This will automatically start Redis (if needed) and run all tests. You can also run:
+```bash
+pytest --cov=agentspring --cov-report=term-missing agentspring/tests/
+```
 
 ### Manual Test
 ```bash
@@ -91,6 +95,11 @@ curl -X POST "http://localhost:8000/analyze" \
 | **Flower Dashboard** | http://localhost:5555 | Task monitoring dashboard |
 | **Ollama** | http://localhost:11434 | LLM model management |
 
+## 🛠️ Starting a New App
+- To start your own agentic app, copy the minimal template from `agentspring/examples/minimal_template/`.
+- For a concise, production-ready example, see `agentspring/examples/concise_example/`.
+- For a full-featured, advanced example, see `agentspring/examples/advanced_example/`.
+
 ## 🔑 Authentication
 
 Use this API key for testing:
@@ -106,4 +115,10 @@ Include it in the `X-API-Key` header with all requests.
 docker-compose logs -f
 ```
 
-See the main [README](README.md) for more details and advanced usage. 
+See the main [README](README.md) for more details, troubleshooting, and advanced usage.
+
+## 🛟 Troubleshooting
+- **Redis connection errors:** Make sure Redis is running before starting the app or running tests.
+- **Test failures:** Ensure all dependencies are installed, Redis is running, and endpoint function names do not start with `test_`.
+- **Error response format mismatch:** Ensure the global exception handler returns JSON with `error`, `code`, and `timestamp` fields (see test examples).
+- **Other issues:** See the [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md) and [README.md](README.md) FAQ sections.

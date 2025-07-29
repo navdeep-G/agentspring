@@ -1,5 +1,9 @@
 # 🗺️ AgentSpring Agentic Roadmap
 
+> **Start here:**
+> - [Main README](README.md) — Overview, setup, and project structure
+> - [Quickstart Guide](QUICKSTART.md) — Fast onboarding and usage
+
 This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orchestrator into a fully agentic system—one that exhibits autonomy, memory, learning, and proactive behavior.
 
 ---
@@ -195,12 +199,12 @@ This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orche
 
 ## **Checklist**
 
-### **Core Capabilities** ✅
+### **Core Capabilities** 
 - [ ] Multi-turn dialogue and memory
 - [ ] Goal and intent management  
 - [ ] Self-monitoring and reflection
 
-### **Autonomy** ✅
+### **Autonomy** 
 - [ ] Proactive suggestions and actions
 - [ ] Learning and adaptation
 

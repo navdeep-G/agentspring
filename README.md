@@ -80,6 +80,14 @@ agentspring/
 │   └── /          # Minimal template for new apps
 ```
 
+<<<<<<< Updated upstream
+=======
+## 🌟 Custom Apps
+- To start a new app, copy the minimal template from `agentspring/examples/minimal_template/`.
+- For a concise, production-ready example (~60 lines), see `agentspring/examples/concise_example/`.
+- For a full-featured, advanced example, see `agentspring/examples/advanced_example/`.
+
+>>>>>>> Stashed changes
 ## 📝 Documentation
 - [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
 - [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md): Roadmap to a fully agentic system
@@ -89,8 +97,8 @@ agentspring/
 
 - Up-to-date README and quickstart guides
 - API docs available at `/docs` (Swagger UI) and `/redoc`
-- Create custom apps in the `` directory
-- Troubleshooting and FAQ sections in the README and TOOL_CONFIGURATION.md
+- Create custom apps in the `agentspring/examples/` directory
+- Troubleshooting and FAQ sections in the README and [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md)
 
 ## 🏆 Why “AgentSpring”?
 # Quickstart: Tenants in AgentSpring
@@ -123,6 +131,15 @@ To add more tenants, use the `/tenants` endpoint with your admin key.
 ---
 
 The name **AgentSpring** draws inspiration from the renowned Spring framework in the Java ecosystem, celebrated for its modularity, extensibility, and developer productivity. Just as Spring enables rapid development and flexible architecture for Java applications, AgentSpring empowers developers to build robust, modular, and scalable agentic APIs and workflows with ease.
+
+## Contributing
+
+We welcome contributions! Please see `CONTRIBUTING.md` for guidelines, or open an issue to discuss your ideas.
+
+## Advanced Usage
+- See [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md) for advanced features and future plans.
+- For extending the tool registry, see [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md).
+- For orchestration engine details, see `agentspring/orchestration.py` and the framework [README](agentspring/README.md).
 
 ## Environment Variables
 - `AGENTSPRING_ENV`: Application environment (development, staging, production)
@@ -192,12 +209,15 @@ docker-compose up --build --scale app=2 --scale celery_worker=2
 ## Automated Testing & CI
 
 - All core features are covered by unit, integration, and end-to-end tests.
-- CI pipeline runs linting (flake8), tests (pytest), and enforces a minimum 80% coverage threshold.
+- CI pipeline runs linting (`flake8`), tests (`pytest`), and enforces a minimum 80% coverage threshold.
 
 ### Running Tests Locally
 
 ```bash
 pip install -r requirements.txt
+# Makefile 'test' target will start Redis if needed
+make test
+# Or manually:
 pytest --cov=agentspring --cov-report=term-missing agentspring/tests/
 ```
 
@@ -214,6 +234,7 @@ flake8 agentspring/
 ### Docker/Kubernetes deployment issues
 - **App not starting:** Check logs for missing environment variables or secrets.
 - **Healthcheck failures:** Ensure Redis and Celery are healthy and reachable.
+- **Redis not running:** Start Redis with `docker-compose up redis` or ensure your local Redis server is running.
 
 ### Redis/Celery connectivity
 - **Task status always pending:** Make sure a Celery worker is running and connected to the same Redis instance as the app.
@@ -225,6 +246,9 @@ flake8 agentspring/
 ### Test failures
 - **Coverage below threshold:** Add or improve tests for uncovered code.
 - **Linting errors:** Run `flake8` and fix reported issues.
+- **Redis connection errors:** Ensure Redis is running before running tests (see Makefile `test` target for automation).
+- **Pytest discovers endpoint functions as tests:** Ensure endpoint function names do not start with `test_`.
+- **Error response format mismatch:** Ensure the global exception handler returns JSON with `error`, `code`, and `timestamp` fields.
 
 For more, see [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md).
 
