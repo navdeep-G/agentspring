@@ -114,6 +114,7 @@ class PromptParser:
                         valid_params[param] = context[param]
             step.parameters = valid_params
             valid_steps.append(step)
+
         if not valid_steps:
             print("[DEBUG] No valid tool steps after mapping/validation. Returning empty chain.")
         return ToolChain(
