@@ -10,7 +10,7 @@ AgentSpring lets you build both:
 ## ⚡ Quick Start
 
 ```bash
-git clone <repository>
+git clone https://github.com/navdeep-G/agentspring.git
 cd agentspring
 ./start.sh
 ```
