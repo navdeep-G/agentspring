@@ -64,7 +64,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           pip install pytest-cov
-          pytest --cov=agentspring --cov-report=xml --cov-report=term-missing agentspring/tests/
+          pytest --cov=agentspring --cov-report=xml --cov-report=term-missing tests/
 
       - name: Check coverage threshold
         run: |

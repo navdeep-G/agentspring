@@ -114,6 +114,7 @@ class PromptParser:
                         valid_params[param] = context[param]
             step.parameters = valid_params
             valid_steps.append(step)
+
         if not valid_steps:
             print("[DEBUG] No valid tool steps after mapping/validation. Returning empty chain.")
         return ToolChain(
@@ -151,7 +152,11 @@ class PromptParser:
 
     def _generate_steps(self, extracted_info: Dict[str, Any], context: Dict[str, Any]) -> List[ToolStep]:
         steps = []
-        for step_info in extracted_info.get("steps", []):
+        step_objs = extracted_info.get("steps", [])
+        # Robustness: Only process if step_objs is a list
+        if not isinstance(step_objs, list):
+            return steps
+        for step_info in step_objs:
             tool_name = step_info.get("tool_name")
             parameters = step_info.get("parameters", {})
             steps.append(ToolStep(

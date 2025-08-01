@@ -28,6 +28,5 @@ python-dotenv
 bleach
 fastapi-permissions
 flake8
-pytest-cov
 alembic
 prometheus_client

@@ -4,6 +4,7 @@ LLM Integration Helpers for AgentSpring
 import json
 import re
 import logging
+import os
 from typing import List, Dict, Any, Optional, Union
 from langchain_community.llms import Ollama
 from langchain_core.prompts import PromptTemplate
@@ -17,8 +18,8 @@ class LLMHelper:
     
     def __init__(self, model: str = "llama3.2", base_url: Optional[str] = None):
         """Initialize LLM with configurable model and base URL"""
-        import os
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        print(f"[LLMHelper] Using Ollama base_url: {self.base_url}")
         self.llm = Ollama(model=model, base_url=self.base_url)
         self.json_parser = JsonOutputParser()
     

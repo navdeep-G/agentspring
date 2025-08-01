@@ -45,7 +45,12 @@ test:
 		echo "[Test] Redis is already running."; \
 	fi
 	@echo "[Test] Running pytest..."
-	pytest agentspring/tests/ --maxfail=3 --disable-warnings -v
+	pytest tests/ --maxfail=3 --disable-warnings -v
+
+# Run coverage with the same settings as CI
+coverage:
+	coverage run -m pytest
+	coverage report --fail-under=40
 
 # Start Celery worker and FastAPI app in background, then run tests
 all:
