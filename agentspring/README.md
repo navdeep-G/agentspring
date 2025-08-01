@@ -1,5 +1,8 @@
 # AgentSpring Framework
 
+> **Note:** This README is for framework contributors and advanced users. For general usage, setup, and high-level documentation, see the [main README](../README.md).
+
+
 > **Start here if new:**
 > - [Main README](../README.md) — Overview, setup, and project structure
 > - [Quickstart Guide](../QUICKSTART.md) — Fast onboarding and usage

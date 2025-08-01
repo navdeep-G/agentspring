@@ -41,7 +41,7 @@
 4. Document the tool in this file or in your app README.
 
 ## How to Test a Tool
-1. Write a unit test in `agentspring/tests/test_tools.py` (create if missing):
+1. Write a unit test in `tests/test_tools.py` (create if missing):
    ```python
    def test_my_custom_tool():
        from agentspring.tools import tool_registry

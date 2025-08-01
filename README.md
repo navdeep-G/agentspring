@@ -63,15 +63,11 @@ agentspring/
 ```
 
 =======
-## 🌟 Custom Apps
-- To start a new app, copy the minimal template from `agentspring/examples/minimal_template/`.
-- For a concise, production-ready example (~60 lines), see `agentspring/examples/concise_example/`.
-- For a full-featured, advanced example, see `agentspring/examples/advanced_example/`.
 
 ## 📝 Documentation
 - [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
 - [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md): Roadmap to a fully agentic system
-- [QUICKSTART.md](QUICKSTART.md): Step-by-step quick start guide
+
 
 ## Documentation & Onboarding
 
