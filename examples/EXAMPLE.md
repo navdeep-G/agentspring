@@ -55,7 +55,7 @@ By default, the example connects to Ollama at `http://localhost:11434`.
 
 ### 5. Run the Example
 ```bash
-PYTHONPATH=. python examples/EXAMPLE.md  # Replace with your actual example script name
+PYTHONPATH=. python agentspring/full_stack_example.py
 ```
 
 ### 6. Output
