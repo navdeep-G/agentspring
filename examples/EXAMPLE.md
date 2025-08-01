@@ -57,13 +57,8 @@ By default, the example connects to Ollama at `http://localhost:11434`.
 
 > **Note:** The following steps are specific to this example. You do **not** need to follow this structure or import these files for general AgentSpring usage or your own projects—this is just for demonstrating how to build and run a custom example.
 
-Ensure that you import `examples/custom_tools.py` in your example script so the example tools are registered:
+All necessary imports and tool registrations are already handled in the example script. You only need to run:
 
-```python
-import examples.custom_tools  # Registers example tools for this example only
-```
-
-Then run:
 ```bash
 PYTHONPATH=. python agentspring/full_stack_example.py
 ```
