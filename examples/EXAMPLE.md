@@ -55,16 +55,19 @@ By default, the example connects to Ollama at `http://localhost:11434`.
 
 ### 5. Run the Example
 
-Ensure that you import `examples/custom_tools.py` in your example script so the tools are registered:
+> **Note:** The following steps are specific to this example. You do **not** need to follow this structure or import these files for general AgentSpring usage or your own projects—this is just for demonstrating how to build and run a custom example.
+
+Ensure that you import `examples/custom_tools.py` in your example script so the example tools are registered:
 
 ```python
-import examples.custom_tools  # Registers example tools
+import examples.custom_tools  # Registers example tools for this example only
 ```
 
 Then run:
 ```bash
 PYTHONPATH=. python agentspring/full_stack_example.py
 ```
+
 
 ### 6. Output
 - The script prints the CSV contents, step-by-step execution, and the LLM-generated summary.
@@ -83,9 +86,11 @@ PYTHONPATH=. python agentspring/full_stack_example.py
 **Q: The script can't find `complaints.csv`.**
 - Ensure the file is in the project root, not inside a subdirectory.
 
-**Q: How do I add new tools or change the workflow?**
-- Register a new tool in `examples/custom_tools.py` (as shown in this example), or another file you import in your example script.
+**Q: How do I add new tools or change the workflow in this example?**
+- For this example, register new tools in `examples/custom_tools.py` (as shown here), or another file you import in your example script.
 - Update the pipeline in your example script (e.g., `agentspring/full_stack_example.py`) or use agentic orchestration for dynamic plans.
+
+> **General Note:** In your own AgentSpring projects, you can define and register tools wherever you prefer. The approach shown here is only for this example's organization and demonstration purposes.
 
 ## Example Comparison: Agentic vs. Non-Agentic
 
