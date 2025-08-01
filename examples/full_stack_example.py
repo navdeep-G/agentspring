@@ -38,7 +38,7 @@ from agentspring.orchestration import create_orchestrator
 from agentspring.tools import tool_registry
 
 # 1. Direct pipeline: always read CSV, summarize, write summary (no LLM/plan)
-from custom_tools import read_csv, summarize_issues, write_summary
+from examples.custom_tools import read_csv, summarize_issues, write_summary
 
 print("\n=== Sample CSV Contents ===")
 with open("complaints.csv") as f:
@@ -50,7 +50,7 @@ csv_result = read_csv("complaints.csv")
 print("Step 1: read_csv ->", csv_result)
 # Step 2: LLM summarize issues
 all_issues = [row["issue"] for row in csv_result["data"] if "issue" in row]
-from custom_tools import llm_summarize_issues
+from examples.custom_tools import llm_summarize_issues
 summary_result = llm_summarize_issues(all_issues)
 print("Step 2: llm_summarize_issues ->", summary_result)
 # Step 3: Write summary
