@@ -196,8 +196,8 @@ def main():
         print("\n🔧 Troubleshooting:")
         print("   • Check if Docker is running: docker info")
         print("   • View logs: docker-compose logs -f")
-        print("   • Restart services: docker-compose down && ./start.sh")
+        print("   • Restart services: docker-compose down && docker-compose up --build")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main() 
+    main()

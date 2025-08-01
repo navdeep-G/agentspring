@@ -42,10 +42,6 @@ def main():
     print("🚀 SupportFlow Agent Test Suite")
     print("=" * 60)
     
-    # Check if we're in the right directory
-    if not Path("main.py").exists():
-        print("❌ Error: main.py not found. Please run from the project root.")
-        sys.exit(1)
     
     # Install test dependencies
     print("\n📦 Installing test dependencies...")
