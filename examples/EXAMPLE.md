@@ -54,6 +54,14 @@ By default, the example connects to Ollama at `http://localhost:11434`.
 - Or pass a custom `base_url` to the `LLMHelper` in your code.
 
 ### 5. Run the Example
+
+Ensure that you import `examples/custom_tools.py` in your example script so the tools are registered:
+
+```python
+import examples.custom_tools  # Registers example tools
+```
+
+Then run:
 ```bash
 PYTHONPATH=. python agentspring/full_stack_example.py
 ```
@@ -76,8 +84,8 @@ PYTHONPATH=. python agentspring/full_stack_example.py
 - Ensure the file is in the project root, not inside a subdirectory.
 
 **Q: How do I add new tools or change the workflow?**
-- Register a new tool in any file within `agentspring/tools/`.
-- Update the pipeline in `full_stack_example.py` or use agentic orchestration for dynamic plans.
+- Register a new tool in `examples/custom_tools.py` (as shown in this example), or another file you import in your example script.
+- Update the pipeline in your example script (e.g., `agentspring/full_stack_example.py`) or use agentic orchestration for dynamic plans.
 
 ## Example Comparison: Agentic vs. Non-Agentic
 
