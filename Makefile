@@ -47,6 +47,11 @@ test:
 	@echo "[Test] Running pytest..."
 	pytest tests/ --maxfail=3 --disable-warnings -v
 
+# Run coverage with the same settings as CI
+coverage:
+	coverage run -m pytest
+	coverage report --fail-under=40
+
 # Start Celery worker and FastAPI app in background, then run tests
 all:
 	@echo "Starting Celery worker and FastAPI app in background, then running tests..."
