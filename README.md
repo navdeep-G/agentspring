@@ -7,22 +7,6 @@ AgentSpring lets you build both:
 - **Traditional APIs** using FastAPIAgent (for classic RESTful endpoints)
 - **Agentic Orchestration**: Dynamically parse natural language prompts into multi-step tool workflows using LLMs and a tool registry
 
-## ⚡ Quick Start
-
-```bash
-git clone https://github.com/navdeep-G/agentspring.git
-cd agentspring
-./start.sh
-```
-Or run directly:
-```bash
-python main.py
-```
-To run a specific example agent:
-```bash
-export AGENTSPRING_APP=examples..endpoints
-python main.py
-```
 
 ## 🧠 Agentic Orchestration Example
 AgentSpring supports prompt-driven, multi-step workflows:
@@ -76,18 +60,14 @@ agentspring/
 │   └── api_versioning.py       # API versioning
 ├── 
 │   ├── / # Full-featured example (advanced)
-│   ├── /           # Concise, production-ready example
-│   └── /          # Minimal template for new apps
 ```
 
-<<<<<<< Updated upstream
 =======
 ## 🌟 Custom Apps
 - To start a new app, copy the minimal template from `agentspring/examples/minimal_template/`.
 - For a concise, production-ready example (~60 lines), see `agentspring/examples/concise_example/`.
 - For a full-featured, advanced example, see `agentspring/examples/advanced_example/`.
 
->>>>>>> Stashed changes
 ## 📝 Documentation
 - [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
 - [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md): Roadmap to a fully agentic system
