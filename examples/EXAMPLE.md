@@ -55,7 +55,7 @@ By default, the example connects to Ollama at `http://localhost:11434`.
 
 ### 5. Run the Example
 ```bash
-PYTHONPATH=. python agentspring/full_stack_example.py
+PYTHONPATH=. python examples/EXAMPLE.md  # Replace with your actual example script name
 ```
 
 ### 6. Output
@@ -76,7 +76,7 @@ PYTHONPATH=. python agentspring/full_stack_example.py
 - Ensure the file is in the project root, not inside a subdirectory.
 
 **Q: How do I add new tools or change the workflow?**
-- Register a new tool in `agentspring/tools/custom.py`.
+- Register a new tool in any file within `agentspring/tools/`.
 - Update the pipeline in `full_stack_example.py` or use agentic orchestration for dynamic plans.
 
 ## Example Comparison: Agentic vs. Non-Agentic
