@@ -58,8 +58,8 @@ agentspring/
 │   ├── celery_app.py           # Celery configuration
 │   ├── multi_tenancy.py        # Multi-tenant support
 │   └── api_versioning.py       # API versioning
-├── 
-│   ├── / # Full-featured example (advanced)
+├── examples/
+│   ├── / # Full-featured example
 ```
 
 =======
