@@ -90,12 +90,57 @@ def test_standard_endpoints_registration():
 client = TestClient(app, raise_server_exceptions=False)
 
 # Test /health endpoint (integration)
-def test_health_endpoint_integration():
-    response = client.get('/health')
+from unittest.mock import patch
+
+from unittest.mock import MagicMock
+
+import pytest
+from unittest.mock import MagicMock
+from fastapi.testclient import TestClient
+
+def make_agent_app_with_tracker(tracker):
+    from agentspring.api import FastAPIAgent, HealthEndpoint, standard_endpoints
+    from unittest.mock import MagicMock
+    agent = FastAPIAgent(title="Test Agent")
+    app = agent.get_app()
+    HealthEndpoint(app, tracker)
+    standard_endpoints(app, MagicMock())
+    return app
+
+@pytest.fixture
+def healthy_app():
+    from agentspring.api import FastAPIAgent
+    from unittest.mock import MagicMock
+    agent = FastAPIAgent(title="Test Agent")
+    agent.metrics_tracker.redis_client = MagicMock()
+    app = agent.get_app()
+    return app
+
+@pytest.fixture
+def unhealthy_app():
+    from agentspring.api import FastAPIAgent
+    agent = FastAPIAgent(title="Test Agent")
+    class FailingRedis:
+        def ping(self, *args, **kwargs):
+            raise Exception("Redis down")
+        def __getattr__(self, name):
+            raise Exception("Redis down")
+    agent.metrics_tracker.redis_client = FailingRedis()
+    app = agent.get_app()
+    return app
+
+def test_health_endpoint_integration(healthy_app):
+    client = TestClient(healthy_app, raise_server_exceptions=False)
+    response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data['status'] == 'healthy'
     assert 'timestamp' in data
+
+def test_health_endpoint_unhealthy(unhealthy_app):
+    client = TestClient(unhealthy_app, raise_server_exceptions=False)
+    response = client.get("/health")
+    assert response.status_code == 503
 
 # Test /test-error endpoint (should log error and return 500)
 def test_error():
