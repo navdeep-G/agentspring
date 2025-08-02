@@ -37,97 +37,49 @@ API, Error Handling, Logging, Monitoring
 from agentspring.orchestration import create_orchestrator
 from agentspring.tools import tool_registry
 
-# 1. Direct pipeline: always read CSV, summarize, write summary (no LLM/plan)
-from examples.custom_tools import read_csv, summarize_issues, write_summary
+from examples import custom_tools
 
-print("\n=== Sample CSV Contents ===")
-with open("complaints.csv") as f:
-    print(f.read())
+tool_registry.register(custom_tools.read_csv)
+tool_registry.register(custom_tools.llm_summarize_issues)
+tool_registry.register(custom_tools.write_summary)
 
-print("\n=== Step-by-Step Execution ===")
-# Step 1: Read CSV
-csv_result = read_csv("complaints.csv")
-print("Step 1: read_csv ->", csv_result)
-# Step 2: LLM summarize issues
-all_issues = [row["issue"] for row in csv_result["data"] if "issue" in row]
-from examples.custom_tools import llm_summarize_issues
-summary_result = llm_summarize_issues(all_issues)
-print("Step 2: llm_summarize_issues ->", summary_result)
-# Step 3: Write summary
-write_result = write_summary(summary_result["summary"], "summary.txt")
-print("Step 3: write_summary ->", write_result)
+# 1. Agentic Orchestration: Parse prompt into tool plan
+orchestrator = create_orchestrator()
+prompt = (
+  "Can you look at the complaints in the CSV file at 'examples/complaints.csv', "
+  "summarize the key issues, and save the summary to a file?"
+)
 
-print("\n=== Final Results ===")
-print({
-    "read_csv": csv_result,
-    "llm_summarize_issues": summary_result,
-    "write_summary": write_result
-})
-exit(0)
+results = orchestrator.execute_prompt(prompt)
+# print("\n=== Sample CSV Contents ===")
+# with open("complaints.csv") as f:
+#     print(f.read())
 
-print("\n=== Sample CSV Contents ===")
-with open("complaints.csv") as f:
-    print(f.read())
+# print("\n=== Tool Plan ===")
+# import pprint
+# pprint.pprint(plan)
 
-print("\n=== Tool Plan ===")
-import pprint
-pprint.pprint(plan)
+print(results)
 
 # 2. Execute the Plan (Sync)
-results = {}
-print("\n=== Step-by-Step Execution ===")
-# plan is now a ToolChain object; use plan.steps for execution
-# Enhanced: resolve {var} references in parameters using previous results
-context = {}
-for idx, step in enumerate(plan.steps, 1):
-    print(f"\nStep {idx}: {step.tool_name} with args: {step.parameters}")
-    resolved_args = {}
-    for k, v in step.parameters.items():
-        if isinstance(v, str) and v.startswith("{") and v.endswith("}"):
-            var_name = v.strip("{}")
-            # For known keys, extract the right value from previous tool result dicts
-            if var_name in results:
-                prev = results[var_name]
-                # If previous result is a dict with a key matching the param, use it
-                if isinstance(prev, dict):
-                    # Special-case: if param expects rows or summary, extract those
-                    if k == "rows" and "data" in prev:
-                        # Special-case: pass only the data list
-                        print(f"[DEBUG] Passing data to {step.tool_name}: {prev['data']}")
-                        resolved_args[k] = prev["data"]
-                    elif k == "summary" and "summary" in prev:
-                        resolved_args[k] = prev["summary"]
-                    else:
-                        # fallback to the whole dict
-                        resolved_args[k] = prev
-                else:
-                    resolved_args[k] = prev
-            elif var_name in context:
-                resolved_args[k] = context[var_name]
-            else:
-                resolved_args[k] = None
-        else:
-            resolved_args[k] = v
-    print(f"[DEBUG] Calling {step.tool_name} with: {resolved_args}")
-    result = tool_registry.execute_tool(step.tool_name, **resolved_args)
-    print(f"Result: {result.result}")
-    results[step.tool_name] = result.result
-    # Also update context for chained variable passing
-    if isinstance(result.result, dict):
-        context.update(result.result)
+# results = {}
+# print("\n=== Step-by-Step Execution ===")
+# for idx, step in enumerate(plan, 1):
+#     print(f"\nStep {idx}: {step['tool']} with args: {step['args']}")
+#     args = {
+#         k: (results[v[8:]] if isinstance(v, str) and v.startswith("<result_of_") else v)
+#         for k, v in step["args"].items()
+#     }
+#     result = tool_registry.execute_tool(step["tool"], **args)
+#     print(f"Result: {result.result}")
+#     results[step["tool"]] = result.result
 
-print("\n=== Final Results ===")
-pprint.pprint(results)
-if (
-    "write_summary" in results
-    and isinstance(results["write_summary"], dict)
-    and "file" in results["write_summary"]
-):
-    print(f"\n=== Summary written to: {results['write_summary']['file']} ===")
-    with open(results['write_summary']['file'], "r") as f:
-        print(f.read())
-else:
-    print("[ERROR] write_summary tool did not produce a file. Result was:", results.get("write_summary"))
+# print("\n=== Final Results ===")
+# pprint.pprint(results)
+# if "write_summary" in results:
+#     print(f"\n=== Summary written to: {results['write_summary'].get('file')} ===")
+#     with open(results['write_summary'].get('file'), "r") as f:
+#         print(f.read())
 
 # 3. (Optional) Async/batch usage
 # from agentspring.tasks import batch_process
