@@ -4,7 +4,8 @@ Comprehensive test scenarios for Enterprise Agent API
 Tests various complaint types, edge cases, and system functionality
 """
 
-import requests
+from fastapi.testclient import TestClient
+from agentspring.api import FastAPIAgent
 import json
 import time
 import random
@@ -15,27 +16,26 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BASE_URL = "http://localhost:8000"
+agent = FastAPIAgent()
+app = agent.get_app()
+client = TestClient(app)
 API_KEY = "demo-key"
 
-def make_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """Make HTTP request with error handling"""
-    url = f"{BASE_URL}{endpoint}"
+def make_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> dict:
+    """Make API request using TestClient with error handling"""
     default_headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
     if headers:
         default_headers.update(headers)
-    
     try:
         if method.upper() == "GET":
-            response = requests.get(url, headers=default_headers)
+            response = client.get(endpoint, headers=default_headers)
         elif method.upper() == "POST":
-            response = requests.post(url, headers=default_headers, json=data)
+            response = client.post(endpoint, headers=default_headers, json=data)
         else:
             raise ValueError(f"Unsupported method: {method}")
-        
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         logger.error(f"Request failed: {e}")
         return {"error": str(e)}
 
@@ -73,7 +73,7 @@ def test_sync_complaint_analysis():
         logger.info(f"Result {i}: {result}")
         time.sleep(1)  # Rate limiting
     
-    return results
+    assert isinstance(results, list)
 
 def test_async_complaint_analysis():
     """Test asynchronous complaint analysis workflow"""
