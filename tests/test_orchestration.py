@@ -59,3 +59,25 @@ def test_execute_prompt_calls_orchestrator(monkeypatch):
         orchestration, 'orchestrator', type('O', (), {'execute_prompt': fake_execute_prompt})())
     result = orchestration.execute_prompt('prompt', {'foo': 'bar'})
     assert result == 'result'
+
+def test_prompt_parser_handles_invalid_tool(monkeypatch):
+    parser = orchestration.PromptParser()
+    # Simulate an invalid tool in the prompt
+    prompt = '{"steps": [{"tool_name": "not_registered", "parameters": {"bar": 1}}]}'
+    chain = parser.parse_prompt(prompt, context={})
+    assert hasattr(chain, "steps")
+    assert isinstance(chain.steps, list)
+
+# Edge case: parse_prompt with invalid JSON
+# Already tested in test_prompt_parser_invalid_input
+
+def test_prompt_parser_handles_nonlist_steps():
+    parser = orchestration.PromptParser()
+    # Pass steps as a string instead of a list
+    prompt = '{"steps": "notalist"}'
+    chain = parser.parse_prompt(prompt, context={})
+    assert hasattr(chain, "steps")
+    assert isinstance(chain.steps, list)
+
+# Exception in extract_structured_data is handled in _extract_intent, which is called by parse_prompt
+# Already tested via test_prompt_parser_invalid_input
