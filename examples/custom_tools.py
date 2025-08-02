@@ -26,17 +26,18 @@ def write_summary(summary: str, file_path: str = "summary.txt") -> dict:
     return {"success": True, "file": file_path}
 
 @tool_registry.register("llm_summarize_issues")
-def llm_summarize_issues(issues: list) -> dict:
-    """
-    Use an LLM to group similar issues and summarize the top 3 most common problems in a human-readable way.
-    """
+def llm_summarize_issues(data: list) -> dict:
     from agentspring.llm import LLMHelper
-    llm = LLMHelper()
+    issues = [row["issue"] for row in data if "issue" in row]
+    if not issues:
+        return {"summary": "No issues found."}
     prompt = (
         "Given the following list of customer complaints, group similar issues (even if worded differently) "
         "and summarize the top 3 most common problems people are reporting. "
         "Respond with a short, human-readable summary.\n\nComplaints:\n"
         + "\n".join(f"- {issue}" for issue in issues)
     )
+    llm = LLMHelper()
     summary = llm.summarize(prompt, max_length=200)
     return {"summary": summary}
+
