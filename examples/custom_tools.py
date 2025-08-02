@@ -1,10 +1,14 @@
 from agentspring.tools import tool_registry
+import pandas as pd
 
-@tool_registry.register("read_csv")
-def read_csv(file_path: str) -> dict:
-    import pandas as pd
+@tool_registry.register("read_csv", "Read file and return as pandas DataFrame")
+def read_csv(file_path: str) -> pd.DataFrame:
     df = pd.read_csv(file_path)
-    return {"data": df.to_dict(orient="records")}
+    return df
+
+@tool_registry.register("print_csv_head", "Return the first 5 rows of a pandas DataFrame")
+def print_csv_head(df: pd.DataFrame) -> pd.DataFrame:
+   return df.head()
 
 @tool_registry.register("summarize_issues")
 def summarize_issues(rows: list) -> dict:

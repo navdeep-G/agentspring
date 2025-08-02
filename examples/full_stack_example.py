@@ -39,90 +39,14 @@ from agentspring.tools import tool_registry
 
 from examples import custom_tools
 
-tool_registry.register(custom_tools.read_csv)
 tool_registry.register(custom_tools.llm_summarize_issues)
 tool_registry.register(custom_tools.write_summary)
+tool_registry.register(custom_tools.read_csv)
+tool_registry.register(custom_tools.print_csv_head)
 
 # 1. Agentic Orchestration: Parse prompt into tool plan
 orchestrator = create_orchestrator()
-prompt = (
-  "Can you look at the complaints in the CSV file at 'examples/complaints.csv', "
-  "summarize the key issues, and save the summary to a file?"
-)
 
-results = orchestrator.execute_prompt(prompt)
-# print("\n=== Sample CSV Contents ===")
-# with open("complaints.csv") as f:
-#     print(f.read())
+user_instruction = "Return the top 5 rows of the following file: examples/complaints.csv."
 
-# print("\n=== Tool Plan ===")
-# import pprint
-# pprint.pprint(plan)
-
-print(results)
-
-# 2. Execute the Plan (Sync)
-# results = {}
-# print("\n=== Step-by-Step Execution ===")
-# for idx, step in enumerate(plan, 1):
-#     print(f"\nStep {idx}: {step['tool']} with args: {step['args']}")
-#     args = {
-#         k: (results[v[8:]] if isinstance(v, str) and v.startswith("<result_of_") else v)
-#         for k, v in step["args"].items()
-#     }
-#     result = tool_registry.execute_tool(step["tool"], **args)
-#     print(f"Result: {result.result}")
-#     results[step["tool"]] = result.result
-
-# print("\n=== Final Results ===")
-# pprint.pprint(results)
-# if "write_summary" in results:
-#     print(f"\n=== Summary written to: {results['write_summary'].get('file')} ===")
-#     with open(results['write_summary'].get('file'), "r") as f:
-#         print(f.read())
-
-# 3. (Optional) Async/batch usage
-# from agentspring.tasks import batch_process
-# from celery import Celery
-# celery_app = Celery(broker="redis://localhost:6379/0")
-# task_ids = batch_process(celery_app, tool_registry._tools["read_csv"], ["complaints1.csv", "complaints2.csv"], wait=False)
-# print("Batch task IDs:", task_ids)
-
-# 4. (Optional) FastAPI API Example: Error Handling, Logging, Auth, Monitoring
-# ----------------------------------------------------------
-# from fastapi import FastAPI, Request
-# from agentspring.api import FastAPIAgent, require_api_key, log_api_error
-# app = FastAPIAgent()
-#
-# @app.post("/analyze_complaints")
-# @require_api_key(role="user")  # Enforces API key and role-based access
-# @log_api_error                  # Logs exceptions and returns structured error responses
-# async def analyze_complaints(request: Request):
-#     data = await request.json()
-#     plan = orchestrator.parse_prompt(
-#         f"Hey agent, analyze complaints in {data['file_path']} and summarize top issues."
-#     )
-#     results = {}
-#     for step in plan:
-#         args = {k: (results[v[8:]] if isinstance(v, str) and v.startswith("<result_of_") else v)
-#                 for k, v in step["args"].items()}
-#         result = tool_registry.execute_tool(step["tool"], **args)
-#         results[step["tool"]] = result.result
-#     return {"result": results}
-#
-# # Monitoring endpoints available out of the box:
-# #   GET /health      -> Health check
-# #   GET /readiness   -> Readiness probe
-# #   GET /liveness    -> Liveness probe
-# # All logs are structured JSON and include user/request context.
-#     file_path = data["file_path"]
-#     plan = orchestrator.parse_prompt(
-#         f"Read '{file_path}', summarize issues, and send to Slack."
-#     )
-#     results = {}
-#     for step in plan:
-#         args = {k: (results[v[8:]] if isinstance(v, str) and v.startswith("<result_of_") else v)
-#                 for k, v in step["args"].items()}
-#         result = tool_registry.execute_tool(step["tool"], **args)
-#         results[step["tool"]] = result.result
-#     return {"result": results}
+orchestrator.execute_prompt(user_instruction)
