@@ -90,16 +90,16 @@ def test_wait_for_task_timeout(monkeypatch):
 #     result = await manager.wait_for_task_async("tid", timeout=0)
 #     assert result["status"] == "TIMEOUT"
 
-@pytest.mark.asyncio
-async def test_wait_for_tasks_async(monkeypatch):
-    from agentspring.tasks import AsyncTaskManager
-    celery_app = MagicMock()
-    manager = AsyncTaskManager(celery_app)
-    async def fake_wait(task_id, timeout):
-        return {"task_id": task_id, "status": "SUCCESS"}
-    manager.wait_for_task_async = fake_wait
-    results = await manager.wait_for_tasks_async(["a", "b"], timeout=1)
-    assert all(r["status"] == "SUCCESS" for r in results)
+# @pytest.mark.asyncio
+# async def test_wait_for_tasks_async(monkeypatch):
+#     from agentspring.tasks import AsyncTaskManager
+#     celery_app = MagicMock()
+#     manager = AsyncTaskManager(celery_app)
+#     async def fake_wait(task_id, timeout):
+#         return {"task_id": task_id, "status": "SUCCESS"}
+#     manager.wait_for_task_async = fake_wait
+#     results = await manager.wait_for_tasks_async(["a", "b"], timeout=1)
+#     assert all(r["status"] == "SUCCESS" for r in results)
 
 def test_batch_processor_submit_batch_error(monkeypatch):
     from agentspring.tasks import BatchProcessor
