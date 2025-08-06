@@ -138,13 +138,6 @@ We welcome contributions! Please see `CONTRIBUTING.md` for guidelines, or open a
 - Task status: `/tasks/{task_id}/status`
 - Task result: `/tasks/{task_id}/result`
 
-All endpoints are documented in the OpenAPI schema (Swagger UI).
-
-## Error Response Format
-All errors return JSON with:
-```
-```
-
 ## Deployment & Scalability
 
 ### Docker Compose
