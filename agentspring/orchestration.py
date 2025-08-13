@@ -361,7 +361,6 @@ __all__ = [
     "ChainExecutionResult",
     "PromptParser",
     "ToolOrchestrator",
-    "orchestrator",
     "execute_prompt",
     "execute_chain",
     "set_prompt_template",
