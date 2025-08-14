@@ -2,34 +2,178 @@
 
 > **Start here:**
 > - [Main README](README.md) — Overview, setup, and project structure
-> 
+> - [Quickstart Guide](QUICKSTART.md) — Get started quickly
+> - [API Reference](docs/API.md) — Detailed API documentation
 
-This roadmap outlines the steps to evolve AgentSpring from a prompt-driven orchestrator into a fully agentic system—one that exhibits autonomy, memory, learning, and proactive behavior.
+## 🚀 Overview
+
+This roadmap outlines the evolutionary path for AgentSpring, transforming it from a basic orchestrator into a fully autonomous, self-improving agentic system. Each phase builds upon the previous ones, adding increasingly sophisticated capabilities while maintaining backward compatibility.
+
+### 📅 Timeline
+
+| Phase | Target Release | Focus Area |
+|-------|----------------|------------|
+| 1 - Core Agentic | Q3 2023 | Basic autonomy & context |
+| 2 - Autonomy | Q4 2023 | Proactivity & learning |
+| 3 - Advanced Features | Q1 2024 | Complex workflows & collaboration |
+| 4 - Enterprise | Q2 2024 | Security & scalability |
+| 5 - Advanced Cognition | H2 2024 | Reasoning & self-improvement |
+| 6 - Production | 2025 | Integration & deployment |
+
+### 🔍 Key Principles
+
+1. **Progressive Enhancement**
+   - Each phase delivers working, testable functionality
+   - Features can be adopted incrementally
+   - Backward compatibility is maintained
+
+2. **Modular Architecture**
+   - Components are loosely coupled
+   - Easy to extend or replace functionality
+   - Clear interfaces between components
+
+3. **Developer Experience**
+   - Comprehensive documentation
+   - Type hints and IDE support
+   - Testing and debugging tools
+
+4. **Production Readiness**
+   - Performance optimization
+   - Monitoring and observability
+   - Security and compliance
+
+## 🎯 Vision
+
+AgentSpring aims to be the most developer-friendly framework for building autonomous, intelligent agents that can:
+
+1. Understand complex instructions
+2. Plan and execute multi-step workflows
+3. Learn from experience
+4. Collaborate with humans and other agents
+5. Operate safely and ethically
 
 ---
 
 ## **Phase 1: Core Agentic Capabilities**
 
 ### 1. Multi-Turn Dialogue & Memory
-- **Goal:** Maintain context across multiple user interactions.
-- **Build:**
-  - Conversation history (short-term memory)
-  - Working memory for intermediate results
-  - Ability to reference previous results in new prompts
+- **Goal:** Maintain context across multiple user interactions with different memory scopes
+- **Components:**
+  - **Short-term Memory**
+    - In-memory storage for current conversation
+    - Automatic cleanup after session timeout
+    - Maximum token limit to prevent memory bloat
+  - **Working Memory**
+    - Stores intermediate results during execution
+    - Supports nested context scopes
+    - Automatic cleanup after workflow completion
+  - **Long-term Memory** (Basic)
+    - Persistent storage for important facts
+    - Vector database integration for semantic search
+    - Manual memory management API
+- **Implementation Details:**
+  ```python
+  # Example usage
+  from agentspring.memory import MemoryManager
+  
+  memory = MemoryManager()
+  
+  # Store conversation context
+  memory.conversation.add("user_preference", {"theme": "dark", "language": "en"})
+  
+  # Working memory (temporary)
+  with memory.work_scope() as ws:
+      ws["intermediate_result"] = process_data()
+      # Automatically cleared after scope exits
+  ```
 
 ### 2. Goal & Intent Management
-- **Goal:** Let users specify high-level goals, not just step-by-step tasks.
-- **Build:**
-  - Intent recognition (what is the user trying to achieve?)
-  - Goal decomposition (break goals into actionable steps)
-  - Progress tracking for ongoing goals
+- **Goal:** Enable high-level goal specification and autonomous decomposition
+- **Components:**
+  - **Intent Recognition**
+    - Classify user input into predefined intents
+    - Support for custom intent classifiers
+    - Confidence scoring for intent matching
+  - **Goal Decomposition**
+    - Break down high-level goals into sub-tasks
+    - Dependency resolution between tasks
+    - Parallel execution where possible
+  - **Progress Tracking**
+    - Real-time progress updates
+    - Estimated time to completion
+    - Progress persistence across restarts
+- **Implementation Details:**
+  ```python
+  # Define a goal with sub-tasks
+  goal = Goal("Generate monthly sales report")
+  goal.add_step("extract_sales_data", depends_on=[])
+  goal.add_step("calculate_metrics", depends_on=["extract_sales_data"])
+  goal.add_step("generate_pdf", depends_on=["calculate_metrics"])
+  
+  # Execute with progress tracking
+  tracker = goal.execute()
+  for update in tracker.stream_updates():
+      print(f"{update.step}: {update.status} - {update.progress}%")
+  ```
 
 ### 3. Self-Monitoring & Reflection
-- **Goal:** The agent can evaluate its own actions and outcomes.
-- **Build:**
-  - Step/result validation (did the output make sense?)
-  - Error detection and recovery (retry, suggest alternatives)
-  - Logging and self-assessment after workflows
+- **Goal:** Enable the agent to evaluate and improve its own performance
+- **Components:**
+  - **Validation Framework**
+    - Type checking and schema validation
+    - Custom validation rules
+    - Automatic error correction suggestions
+  - **Error Recovery**
+    - Automatic retry with exponential backoff
+    - Alternative approach suggestion
+    - Fallback mechanisms
+  - **Self-Assessment**
+    - Execution metrics collection
+    - Success/failure analysis
+    - Automatic adjustment of strategies
+- **Implementation Details:**
+  ```python
+  @self_monitor(
+      retries=3,
+      backoff=2,
+      validate_result=validate_report,
+      on_failure=notify_admin
+  )
+  async def generate_report(params: ReportParams) -> Report:
+      # Implementation with automatic monitoring
+      pass
+  ```
+
+### 4. Tool Integration & Execution
+- **Goal:** Seamless integration and execution of tools
+- **Components:**
+  - **Tool Registry**
+    - Dynamic tool discovery
+    - Versioning and compatibility
+    - Access control
+  - **Execution Engine**
+    - Parallel execution
+    - Resource management
+    - Timeout handling
+  - **Result Processing**
+    - Data transformation
+    - Error handling
+    - Caching
+- **Implementation Details:**
+  ```python
+  # Register a new tool
+  @tool(
+      name="analyze_data",
+      description="Perform advanced data analysis",
+      parameters={
+          "dataset": {"type": "string", "format": "uri"},
+          "analysis_type": {"type": "string", "enum": ["trend", "outlier", "correlation"]}
+      }
+  )
+  async def analyze_data(dataset: str, analysis_type: str) -> dict:
+      # Tool implementation
+      pass
+  ```
 
 ---
 
