@@ -1,0 +1,19 @@
+# Core dependencies (required)
+aiohttp>=3.8.4
+pydantic>=2.0.0
+tenacity>=8.2.2
+nest-asyncio>=1.5.6  # For async support in Jupyter notebooks
+
+# Optional provider-specific dependencies
+# Uncomment only the providers you need:
+
+# For Ollama provider
+# ollama>=0.1.0
+
+# For LangChain integration
+# langchain-community>=0.0.10
+
+# For testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.1
+pytest-cov>=4.0.0

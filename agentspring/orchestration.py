@@ -8,8 +8,9 @@ import json
 from typing import Dict, Any, List, Optional, Union, Callable
 from datetime import datetime
 from pydantic import BaseModel, Field
+
 from .tools import tool_registry, ToolExecutionResult
-from .llm import LLMHelper
+from .llm.registry import LLMRegistry, get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,17 @@ class ChainExecutionResult(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
 
 class PromptParser:
-    def __init__(self, llm_helper: Optional[LLMHelper] = None, prompt_template: Optional[str] = None):
-        self.llm_helper = llm_helper or LLMHelper()
+    def __init__(self, llm_provider=None, prompt_template: Optional[str] = None):
+        try:
+            self.llm = llm_provider or get_provider()
+        except ValueError as e:
+            if "No default LLM provider" in str(e):
+                raise RuntimeError(
+                    "No LLM provider specified and no default provider is set. "
+                    "Please either pass an LLM provider instance or register a default provider."
+                ) from e
+            raise
+            
         self.available_tools = tool_registry.get_all_schemas()
         # Allow custom prompt template or use default
         self.prompt_template = prompt_template or self._get_default_prompt_template()
@@ -169,9 +179,24 @@ class PromptParser:
         return steps
 
 class ToolOrchestrator:
-    def __init__(self, prompt_parser: Optional[PromptParser] = None, prompt_template: Optional[str] = None):
-        self.prompt_parser = prompt_parser or PromptParser(prompt_template=prompt_template)
-        self.tool_registry = tool_registry
+    def __init__(
+        self,
+        llm_provider=None,
+        tool_registry: Any = None,
+        prompt_parser: Optional[PromptParser] = None,
+        prompt_template: Optional[str] = None,
+        max_steps: int = 10,
+        verbose: bool = False
+    ):
+        self.tool_registry = tool_registry or tool_registry
+        self.prompt_parser = prompt_parser or PromptParser(
+            llm_provider=llm_provider,
+            prompt_template=prompt_template
+        )
+        self.max_steps = max_steps
+        self.verbose = verbose
+        self.active_runs = {}
+        self.execution_log = []
 
     def set_prompt_template(self, template: str):
         """Set a custom prompt template for the orchestrator"""
@@ -310,25 +335,25 @@ class AgentOrchestrator:
             self.log_action(run_id, 'end')
             self.active_runs[run_id]['status'] = 'ended'
 
-orchestrator = ToolOrchestrator()
+def create_orchestrator(llm_provider=None, prompt_template: Optional[str] = None):
+    """Create a new orchestrator instance with optional LLM provider and custom prompt template"""
+    return ToolOrchestrator(llm_provider=llm_provider, prompt_template=prompt_template)
 
-def execute_prompt(prompt: str, context: Optional[Dict[str, Any]] = None) -> ChainExecutionResult:
-    return orchestrator.execute_prompt(prompt, context)
+def execute_prompt(prompt: str, context: Optional[Dict[str, Any]] = None, llm_provider=None):
+    """Execute a prompt with the specified LLM provider"""
+    return create_orchestrator(llm_provider).execute_prompt(prompt, context)
 
-def execute_chain(chain: ToolChain) -> ChainExecutionResult:
-    return orchestrator.execute_chain(chain)
+def execute_chain(chain: ToolChain, llm_provider=None):
+    """Execute a tool chain with the specified LLM provider"""
+    return create_orchestrator(llm_provider).execute_chain(chain)
 
-def set_prompt_template(template: str):
+def set_prompt_template(template: str, llm_provider=None):
     """Set a custom prompt template for the orchestrator"""
-    orchestrator.set_prompt_template(template)
+    return create_orchestrator(llm_provider).set_prompt_template(template)
 
-def get_prompt_template() -> str:
+def get_prompt_template(llm_provider=None):
     """Get the current prompt template"""
-    return orchestrator.get_prompt_template()
-
-def create_orchestrator(prompt_template: Optional[str] = None) -> ToolOrchestrator:
-    """Create a new orchestrator instance with optional custom prompt template"""
-    return ToolOrchestrator(prompt_template=prompt_template)
+    return create_orchestrator(llm_provider).get_prompt_template()
 
 __all__ = [
     "ToolStep",
@@ -336,7 +361,6 @@ __all__ = [
     "ChainExecutionResult",
     "PromptParser",
     "ToolOrchestrator",
-    "orchestrator",
     "execute_prompt",
     "execute_chain",
     "set_prompt_template",
