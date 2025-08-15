@@ -1,5 +1,9 @@
 fastapi==0.104.1
-uvicorn==0.24.0
+prometheus-client
+bleach
+fastapi-permissions
+sentry-sdk
+uvicorn
 pydantic==2.5.0
 redis==5.0.1
 celery==5.3.4
@@ -20,13 +24,8 @@ google-api-python-client==2.108.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
 openai-whisper==20231117
-# textract==1.6.4  # BROKEN on PyPI due to dependency metadata, see https://github.com/deanmalmgren/textract/issues/360
 python-json-logger
-sentry-sdk
 structlog
 python-dotenv
-bleach
-fastapi-permissions
 flake8
 alembic
-prometheus_client

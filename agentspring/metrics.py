@@ -1,4 +1,47 @@
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+
+# API Metrics
+REQUEST_COUNTER = Counter(
+    "api_requests_total",
+    "Total number of API requests",
+    ["method", "endpoint", "http_status"]
+)
+
+# Tool Metrics
+TOOL_USAGE_COUNTER = Counter(
+    "tool_executions_total",
+    "Total number of tool executions",
+    ["tool_name", "status"]  # status can be 'success' or 'failure'
+)
+
+TOOL_LATENCY_HISTOGRAM = Histogram(
+    "tool_execution_latency_seconds",
+    "Latency of tool executions",
+    ["tool_name"]
+)
+
+# LLM Metrics
+LLM_REQUEST_COUNTER = Counter(
+    "llm_requests_total",
+    "Total number of LLM requests",
+    ["model_name", "status"]
+)
+
+LLM_TOKEN_COUNTER = Counter(
+    "llm_tokens_total",
+    "Total number of LLM tokens processed",
+    ["model_name", "token_type"]  # token_type can be 'prompt' or 'completion'
+)
+
+LLM_LATENCY_HISTOGRAM = Histogram(
+    "llm_request_latency_seconds",
+    "Latency of LLM requests",
+    ["model_name"]
+)
+
+def get_metrics():
+    """Generate latest metrics."""
+    return generate_latest(REGISTRY)
 from fastapi.responses import Response
 
 def get_or_create_counter(name, documentation, labelnames=()):

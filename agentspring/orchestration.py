@@ -5,6 +5,14 @@ Handles dynamic user prompts and translates them into tool execution chains
 import logging
 import re
 import json
+import time
+from .metrics import (
+    TOOL_USAGE_COUNTER,
+    TOOL_LATENCY_HISTOGRAM,
+    LLM_REQUEST_COUNTER,
+    LLM_LATENCY_HISTOGRAM,
+    LLM_TOKEN_COUNTER
+)
 from typing import Dict, Any, List, Optional, Union, Callable
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -152,13 +160,22 @@ class PromptParser:
         
         prompt_template = self.prompt_template.format(prompt=prompt, tools_list=tools_list)
         print("[DEBUG] Sending to LLM:\n", prompt_template)
+        start_time = time.time()
+        status = "success"
         try:
-            extracted = self.llm_helper.extract_structured_data(prompt_template, schema)
+            # Assuming self.llm is the provider instance with an 'extract_structured_data' method
+            extracted = self.llm.extract_structured_data(prompt_template, schema)
             print("[DEBUG] LLM raw output:", extracted)
             return extracted
         except Exception as e:
+            status = "failure"
             print(f"[DEBUG] Failed to extract intent with LLM: {e}")
             return {"steps": [], "priority": "medium", "intent": "unknown"}
+        finally:
+            latency = time.time() - start_time
+            model_name = getattr(self.llm, 'model_name', 'unknown')
+            LLM_LATENCY_HISTOGRAM.labels(model_name=model_name).observe(latency)
+            LLM_REQUEST_COUNTER.labels(model_name=model_name, status=status).inc()
 
     def _generate_steps(self, extracted_info: Dict[str, Any], context: Dict[str, Any]) -> List[ToolStep]:
         steps = []
@@ -233,7 +250,20 @@ class ToolOrchestrator:
                 resolved_params = self._resolve_parameters(step.parameters, current_context)
                 # (Strict) Do NOT auto-fill missing parameters from context unless via {{var}} substitution
                 # Execute the tool
-                step_result = self.tool_registry.execute_tool(step.tool_name, **resolved_params)
+                tool_start_time = time.time()
+                status = "success"
+                try:
+                    step_result = self.tool_registry.execute_tool(step.tool_name, **resolved_params)
+                    if not step_result.success:
+                        status = "failure"
+                except Exception:
+                    status = "failure"
+                    raise
+                finally:
+                    latency = time.time() - tool_start_time
+                    TOOL_LATENCY_HISTOGRAM.labels(tool_name=step.tool_name).observe(latency)
+                    TOOL_USAGE_COUNTER.labels(tool_name=step.tool_name, status=status).inc()
+
                 results.append(step_result)
                 # Update context with the result
                 if step_result.success and step_result.result:
