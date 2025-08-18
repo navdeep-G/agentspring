@@ -17,7 +17,7 @@ import bleach
 from fastapi import Security, Depends
 from fastapi.security.api_key import APIKeyHeader
 from fastapi_permissions import Allow, Deny, Authenticated, Everyone, configure_permissions
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+from .metrics import REQUEST_COUNTER, get_metrics
 from fastapi.responses import Response
 
 # Sentry integration
@@ -52,59 +52,7 @@ def log_api_error(func):
             raise
     return wrapper
 
-class MetricsTracker:
-    """Track API metrics in Redis"""
-    
-    def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-        self.redis_client = redis.Redis.from_url(self.redis_url)
-    
-    def track_request(self, success: bool, response_time: float, endpoint: str = "unknown"):
-        """Track a single request"""
-        try:
-            # Increment total requests
-            self.redis_client.incr("metrics:total_requests")
-            
-            # Increment success/failure counters
-            if success:
-                self.redis_client.incr("metrics:successful_requests")
-            else:
-                self.redis_client.incr("metrics:failed_requests")
-            
-            # Track response time (rolling average)
-            response_times_key = "metrics:response_times"
-            self.redis_client.lpush(response_times_key, response_time)
-            self.redis_client.ltrim(response_times_key, 0, 99)  # Keep last 100 times
-            
-            # Track endpoint-specific metrics
-            self.redis_client.incr(f"metrics:endpoint:{endpoint}:total")
-            if success:
-                self.redis_client.incr(f"metrics:endpoint:{endpoint}:success")
-            else:
-                self.redis_client.incr(f"metrics:endpoint:{endpoint}:failed")
-            
-            # Track hourly metrics
-            current_hour = datetime.now().strftime("%Y-%m-%d-%H")
-            self.redis_client.incr(f"metrics:hourly:{current_hour}:total")
-            if success:
-                self.redis_client.incr(f"metrics:hourly:{current_hour}:success")
-            else:
-                self.redis_client.incr(f"metrics:hourly:{current_hour}:failed")
-                
-        except Exception as e:
-            logger.error(f"Error tracking metrics: {e}")
-    
-    def get_average_response_time(self) -> float:
-        """Calculate average response time from Redis"""
-        try:
-            response_times = self.redis_client.lrange("metrics:response_times", 0, -1)
-            if response_times:
-                times = [float(t) for t in response_times]
-                return sum(times) / len(times)
-            return 0.0
-        except Exception as e:
-            logger.error(f"Error calculating average response time: {e}")
-            return 0.0
+
 
 class AuthMiddleware:
     """API Key authentication middleware"""
@@ -120,58 +68,31 @@ class AuthMiddleware:
             )
         return x_api_key
 
-class HealthEndpoint:
-    """Standard health check endpoint"""
-    
-    def __init__(self, app: FastAPI, metrics_tracker: Optional[MetricsTracker] = None):
-        self.app = app
-        self.metrics_tracker = metrics_tracker
-        self._setup_health_endpoint()
-    
-    def _setup_health_endpoint(self):
-        @self.app.get("/health")
-        async def health_check():
-            """Health check endpoint"""
-            start_time = time.time()
-            
-            try:
-                # Check Redis connection if metrics tracker is available
-                if self.metrics_tracker:
-                    self.metrics_tracker.redis_client.ping()
-                
-                processing_time = time.time() - start_time
-                
-                # Track metrics if available
-                if self.metrics_tracker:
-                    self.metrics_tracker.track_request(True, processing_time, "health")
-                
-                return {
-                    "status": "healthy",
-                    "timestamp": datetime.now().isoformat(),
-                    "redis": "connected" if self.metrics_tracker else "not_configured",
-                    "response_time": processing_time
-                }
-            except Exception as e:
-                processing_time = time.time() - start_time
-                
-                if self.metrics_tracker:
-                    self.metrics_tracker.track_request(False, processing_time, "health")
-                
-                raise HTTPException(status_code=503, detail="Service unhealthy")
+
 
 class FastAPIAgent:
     """Base FastAPI agent class with all AgentSpring standard endpoints pre-registered.
     Users should only add their own endpoints to self.app or agent.get_app()."""
     def __init__(self, title: str = "AgentSpring Agent", api_key_env: str = "API_KEY"):
         self.app = FastAPI(title=title)
-        self.metrics_tracker = MetricsTracker()
         self.auth_middleware = AuthMiddleware(api_key_env)
-        self.health_endpoint = HealthEndpoint(self.app, self.metrics_tracker)
-        
+        self.async_task_manager = self._initialize_async_tasks()
+
         # Setup common middleware and error handlers
         self._setup_error_handlers()
+        self.app.middleware("http")(self.track_requests)
+
         # Register all standard endpoints
         self._register_standard_endpoints()
+
+    def _initialize_async_tasks(self):
+        """Safely initialize the AsyncTaskManager if celery is configured."""
+        try:
+            from agentspring.celery_app import celery_app
+            return AsyncTaskManager(celery_app)
+        except (ImportError, Exception) as e:
+            logger.warning(f"Could not initialize AsyncTaskManager: {e}. Running without async task support.")
+            return None
 
         # --- Scaffolded endpoints for test and coverage completeness ---
         @self.app.post("/analyze")
@@ -237,36 +158,42 @@ class FastAPIAgent:
                 return role
             return role_checker
         # Standard endpoints
-        @self.app.get('/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
-        def get_task_status(task_id: str):
-            status = async_task_manager.get_task_status(task_id)
-            return status
-        @self.app.get('/tasks/{task_id}/result', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
-        def get_task_result(task_id: str):
-            status = async_task_manager.get_task_status(task_id)
-            if status['status'] == 'SUCCESS':
-                return {'result': status['result']}
-            elif status['status'] == 'FAILURE':
-                return {'error': status.get('error', 'Task failed')}
-            else:
-                return {'status': status['status']}
-        @self.app.get('/tenants/{tenant_id}/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
-        def get_tenant_task_status(tenant_id: str, task_id: str, x_api_key: str = Header(...)):
-            tenant = tenant_manager.get_tenant_by_id(tenant_id)
-            if not tenant:
-                raise HTTPException(status_code=404, detail="Tenant not found. By default, only tenant_id='default' exists. See /tenants for available tenants.")
-            if not tenant.active:
-                raise HTTPException(status_code=403, detail='Tenant is inactive')
-            if tenant.api_key != x_api_key:
-                raise HTTPException(status_code=401, detail='Invalid API key for tenant')
-            return async_task_manager.get_task_status(task_id)
+        if self.async_task_manager:
+            @self.app.get('/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+            def get_task_status(task_id: str):
+                status = self.async_task_manager.get_task_status(task_id)
+                return status
+            @self.app.get('/tasks/{task_id}/result', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+            def get_task_result(task_id: str):
+                status = self.async_task_manager.get_task_status(task_id)
+                if status['status'] == 'SUCCESS':
+                    return {'result': status['result']}
+                elif status['status'] == 'FAILURE':
+                    return {'error': status.get('error', 'Task failed')}
+                else:
+                    return {'status': status['status']}
+            @self.app.get('/tenants/{tenant_id}/tasks/{task_id}/status', dependencies=[Depends(self.auth_middleware), Depends(require_role('user'))])
+            def get_tenant_task_status(tenant_id: str, task_id: str, x_api_key: str = Header(...)):
+                tenant = tenant_manager.get_tenant_by_id(tenant_id)
+                if not tenant:
+                    raise HTTPException(status_code=404, detail="Tenant not found. By default, only tenant_id='default' exists. See /tenants for available tenants.")
+                if not tenant.active:
+                    raise HTTPException(status_code=403, detail='Tenant is inactive')
+                if tenant.api_key != x_api_key:
+                    raise HTTPException(status_code=401, detail='Invalid API key for tenant')
+                return self.async_task_manager.get_task_status(task_id)
+        
         @self.app.get('/health', tags=["Health"])
         def health():
-            try:
-                async_task_manager.metrics_tracker.redis_client.ping()
-                return {"status": "healthy"}
-            except Exception as e:
-                return {"status": "unhealthy", "error": str(e)}
+            redis_status = "disconnected"
+            if self.async_task_manager:
+                try:
+                    # Access the client through the backend
+                    self.async_task_manager.celery_app.backend.client.ping()
+                    redis_status = "connected"
+                except Exception:
+                    redis_status = "disconnected"
+            return {"status": "healthy", "redis": redis_status}
         @self.app.get('/readiness')
         def readiness():
             # Add readiness logic as needed
@@ -274,6 +201,10 @@ class FastAPIAgent:
         @self.app.get('/liveness')
         def liveness():
             return {"status": "alive"}
+
+        @self.app.get("/metrics")
+        def metrics():
+            return Response(get_metrics(), media_type="text/plain")
         # Add any other standard endpoints here
     
     def _setup_error_handlers(self):
@@ -306,31 +237,31 @@ class FastAPIAgent:
                 }
             )
     
-    def endpoint(self, path: str, **kwargs):
-        """Decorator to add endpoints with automatic metrics tracking"""
-        def decorator(func: Callable):
-            async def wrapper(*args, **kwargs):
-                start_time = time.time()
-                try:
-                    result = await func(*args, **kwargs)
-                    processing_time = time.time() - start_time
-                    self.metrics_tracker.track_request(True, processing_time, path)
-                    return result
-                except Exception as e:
-                    processing_time = time.time() - start_time
-                    self.metrics_tracker.track_request(False, processing_time, path)
-                    raise
-            
-            # Register the endpoint
-            self.app.add_api_route(path, wrapper, **kwargs)
-            return wrapper
-        return decorator
+
     
+    async def track_requests(self, request: Request, call_next):
+        """Middleware to track API requests and update Prometheus metrics."""
+        response = await call_next(request)
+        # Get the endpoint path from the request's route, if it exists
+        endpoint = "/path/not/found"
+        for route in request.app.routes:
+            match, _ = route.matches(request.scope)
+            if match:
+                endpoint = route.path
+                break
+
+        REQUEST_COUNTER.labels(
+            method=request.method,
+            endpoint=endpoint,
+            http_status=response.status_code
+        ).inc()
+        return response
+
     def get_app(self) -> FastAPI:
         """Get the FastAPI app instance"""
         return self.app 
 
-def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func: Optional[Callable] = None):
+def standard_endpoints(app: FastAPI, task_manager: Optional[AsyncTaskManager], batch_func: Optional[Callable] = None):
     """
     Register standard async and batch endpoints to the app.
     - /task/{task_id}: Get async task status
@@ -352,17 +283,7 @@ def standard_endpoints(app: FastAPI, task_manager: AsyncTaskManager, batch_func:
 
 # Remove global app instance. All endpoints are now registered via FastAPIAgent.
 
-api_requests_total = Counter('api_requests_total', 'Total API requests', ['method', 'endpoint'])
 
-# @app.middleware('http')
-# async def prometheus_metrics_middleware(request: Request, call_next):
-#     response = await call_next(request)
-#     api_requests_total.labels(request.method, request.url.path).inc()
-#     return response
-
-# @app.get('/metrics')
-# def metrics():
-#     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # @log_api_error
 # def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
@@ -371,13 +292,10 @@ api_requests_total = Counter('api_requests_total', 'Total API requests', ['metho
 # app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
 
 # Add /task-status/{task_id} endpoint
-from agentspring.celery_app import celery_app
 from celery.result import AsyncResult
 from agentspring.audit import audit_log
 from agentspring.multi_tenancy import tenant_manager, TenantConfig
 from fastapi import HTTPException
-
-async_task_manager = AsyncTaskManager(celery_app)
 
 # RBAC: Define roles and permissions
 ROLES = {

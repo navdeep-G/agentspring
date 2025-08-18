@@ -76,35 +76,64 @@ agentspring/
 - Create custom apps in the `agentspring/examples/` directory
 - Troubleshooting and FAQ sections in the README and [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md)
 
+## 🚀 Quickstart
+
+Get up and running with AgentSpring in minutes. You can run the application using Docker (recommended) or locally for development.
+
+### Running with Docker Compose
+
+This project includes two Docker Compose files for different use cases:
+
+1.  **Minimal Setup (`docker-compose.yml`)**
+    This runs the core application, including the FastAPI server and the Celery worker for background tasks. It's perfect for general development and testing the main application logic.
+
+    ```bash
+    # Start the core application
+    docker-compose up --build
+    ```
+
+2.  **Full Stack with Monitoring (`docker-compose.full.yml`)**
+    This runs the entire stack, including the application, Celery, Redis, and a full observability suite with **Prometheus**, **Grafana**, and **Loki**.
+
+    ```bash
+    # Start the full stack with monitoring
+    docker-compose -f docker-compose.full.yml up --build
+    ```
+
+### Running Locally
+
+For quick development, you can run the test application directly:
+
+```bash
+# Install dependencies
+. venv/bin/activate
+pip install -r requirements.txt
+
+# Run the test server
+python examples/test_app.py
+```
+
+The server will be available at `http://localhost:8000`.
+
+## 📈 Observability & Monitoring
+
+AgentSpring is built for production and includes a comprehensive monitoring stack out of the box when using the `docker-compose.full.yml` file.
+
+-   **Prometheus**: Collects application metrics. Access the Prometheus UI at `http://localhost:9090`.
+-   **Grafana**: Visualizes the metrics collected by Prometheus. Access the Grafana dashboard at `http://localhost:3000` (login with `admin`/`admin`).
+-   **Loki**: Aggregates logs from all services.
+
+### Key Metrics
+
+The application exposes key performance indicators at the `/metrics` endpoint, including:
+-   `api_requests_total`: Total number of API requests, labeled by endpoint, method, and status code.
+-   `tool_executions_total`: Tracks the number of tool executions.
+-   `tool_execution_latency_seconds`: Measures the latency of tool executions.
+
+### Health Checks
+-   `/health`: A simple endpoint to confirm the application is running.
+
 ## 🏆 Why “AgentSpring”?
-# Quickstart: Tenants in AgentSpring
-
-AgentSpring supports multi-tenancy out of the box. By default, only one tenant is created:
-- tenant_id: `default`
-- api_key: `demo-key`
-
-All API requests must use this tenant unless you create more via the admin API.
-
-**Example: Submit a task and poll for status**
-```sh
-curl -X POST http://localhost:8000/analyze_async \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: demo-key" \
-  -H "x-role: user" \
-  -d '{"customer_id": "default", "message": "My laptop is broken"}'
-
-curl -H "x-api-key: demo-key" -H "x-role: user" \
-  http://localhost:8000/tenants/default/tasks/<task_id>/status
-```
-
-To see all tenants:
-```sh
-curl -H "X-Admin-Key: admin-key" http://localhost:8000/tenants
-```
-
-To add more tenants, use the `/tenants` endpoint with your admin key.
-
----
 
 The name **AgentSpring** draws inspiration from the renowned Spring framework in the Java ecosystem, celebrated for its modularity, extensibility, and developer productivity. Just as Spring enables rapid development and flexible architecture for Java applications, AgentSpring empowers developers to build robust, modular, and scalable agentic APIs and workflows with ease.
 
@@ -127,28 +156,27 @@ We welcome contributions! Please see `CONTRIBUTING.md` for guidelines, or open a
 - `TENANT_ID`: (if multi-tenancy is used)
 - ... (see .env.example for more)
 
-## Monitoring & Alerting
-- **Sentry**: Set `SENTRY_DSN` to enable error monitoring.
-- **Log Aggregation**: Forward logs to ELK, Loki, or Datadog using their agents or log shippers.
-
-## Observability & Monitoring
-- Health check: `/health`
-- Readiness probe: `/readiness`
-- Liveness probe: `/liveness`
-- Task status: `/tasks/{task_id}/status`
-- Task result: `/tasks/{task_id}/result`
-
 ## Deployment & Scalability
 
 ### Docker Compose
-To start the app, Redis, and Celery workers with horizontal scaling:
 
-```bash
-docker-compose up --build --scale app=2 --scale celery_worker=2
-```
+This project includes two Docker Compose files for different use cases:
 
-- Healthchecks are configured for all services.
-- Uses `.env` for configuration.
+1.  **Minimal Setup (`docker-compose.yml`)**
+    This runs the core application, including the FastAPI server and the Celery worker for background tasks. It's perfect for general development and testing the main application logic.
+
+    ```bash
+    # Start the core application and scale services
+    docker-compose up --build --scale app=2 --scale celery_worker=2
+    ```
+
+2.  **Full Stack with Monitoring (`docker-compose.full.yml`)**
+    This runs the entire stack, including the application, Celery, Redis, and a full observability suite with **Prometheus**, **Grafana**, and **Loki**.
+
+    ```bash
+    # Start the full stack with monitoring
+    docker-compose -f docker-compose.full.yml up --build
+    ```
 
 ### Kubernetes Deployment
 
