@@ -4,7 +4,7 @@ bleach
 fastapi-permissions
 sentry-sdk
 uvicorn
-pydantic==2.5.0
+pydantic
 redis==5.0.1
 celery==5.3.4
 requests==2.31.0
@@ -14,16 +14,16 @@ langchain-core==0.1.48
 langchain-community==0.0.21
 
 # Optional dependencies for real implementations
-psycopg2-binary==2.9.9
+#psycopg2-binary==2.9.9
 PyPDF2==3.0.1
-Pillow==10.1.0
+#Pillow==10.1.0
 pytesseract==0.3.10
 python-docx==1.1.0
 twilio==8.0.0
 google-api-python-client==2.108.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
-openai-whisper==20231117
+#openai-whisper==20231117
 python-json-logger
 structlog
 python-dotenv

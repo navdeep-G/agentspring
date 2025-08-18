@@ -237,32 +237,22 @@ class FastAPIAgent:
                 }
             )
     
-    def endpoint(self, path: str, **kwargs):
-        """Decorator to add endpoints with automatic metrics tracking"""
-        def decorator(func: Callable):
-            async def wrapper(*args, **kwargs):
-                start_time = time.time()
-                try:
-                    result = await func(*args, **kwargs)
-                    processing_time = time.time() - start_time
-                    self.metrics_tracker.track_request(True, processing_time, path)
-                    return result
-                except Exception as e:
-                    processing_time = time.time() - start_time
-                    self.metrics_tracker.track_request(False, processing_time, path)
-                    raise
-            
-            # Register the endpoint
-            self.app.add_api_route(path, wrapper, **kwargs)
-            return wrapper
-        return decorator
+
     
     async def track_requests(self, request: Request, call_next):
         """Middleware to track API requests and update Prometheus metrics."""
         response = await call_next(request)
+        # Get the endpoint path from the request's route, if it exists
+        endpoint = "/path/not/found"
+        for route in request.app.routes:
+            match, _ = route.matches(request.scope)
+            if match:
+                endpoint = route.path
+                break
+
         REQUEST_COUNTER.labels(
             method=request.method,
-            endpoint=request.url.path,
+            endpoint=endpoint,
             http_status=response.status_code
         ).inc()
         return response

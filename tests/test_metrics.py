@@ -31,15 +31,18 @@ def test_register_custom_metric_and_call():
 
 
 def test_setup_metrics_middleware_and_metrics_endpoint():
-    app = FastAPI()
-    metrics.setup_metrics(app)
-    client = TestClient(app)
+    from agentspring.api import FastAPIAgent
+    agent = FastAPIAgent()
+    client = TestClient(agent.get_app())
+
     # Simulate a request to trigger the middleware and increment the counter
-    @app.get('/foo')
+    @agent.app.get('/foo')
     def foo():
         return {'ok': True}
+
     resp = client.get('/foo')
     assert resp.status_code == 200
+
     # /metrics endpoint should be present and return Prometheus text
     metrics_resp = client.get('/metrics')
     assert metrics_resp.status_code == 200
