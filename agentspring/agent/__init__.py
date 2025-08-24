@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel, Field
 
-from ..goals import Goal
+from ..goals import Goal, GoalStatus
 from ..tools import ToolRegistry
 
 T = TypeVar("T", bound="Agent")
