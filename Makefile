@@ -75,11 +75,11 @@ venv:
 
 # Run flake8 linter (if installed)
 lint:
-	@.venv/bin/flake8 . || echo "flake8 not installed. Run 'make install' and 'pip install flake8' in .venv."
+	flake8 ./agentspring
 
 # Run black code formatter (if installed)
 format:
-	@.venv/bin/black . || echo "black not installed. Run 'make install' and 'pip install black' in .venv."
+	black .
 
 # Kill background dev servers (uvicorn, celery)
 stop:

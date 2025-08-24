@@ -22,6 +22,8 @@ agentspring.egg-info/dependency_links.txt
 agentspring.egg-info/entry_points.txt
 agentspring.egg-info/requires.txt
 agentspring.egg-info/top_level.txt
+agentspring/agent/__init__.py
+agentspring/goals/__init__.py
 agentspring/llm/__init__.py
 agentspring/llm/base.py
 agentspring/llm/registry.py
@@ -32,7 +34,9 @@ agentspring/tools/data_storage.py
 agentspring/tools/media.py
 agentspring/tools/system.py
 agentspring/tools/web_search.py
+agentspring/workflow/__init__.py
 tests/__init__.py
+tests/test_agent_workflow.py
 tests/test_api.py
 tests/test_api_versioning.py
 tests/test_app_loader.py
