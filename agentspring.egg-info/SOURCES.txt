@@ -1,7 +1,6 @@
 README.md
 pyproject.toml
 setup.py
-agentspring/README.md
 agentspring/__init__.py
 agentspring/api.py
 agentspring/api_versioning.py
@@ -13,7 +12,6 @@ agentspring/logging_config.py
 agentspring/metrics.py
 agentspring/models.py
 agentspring/multi_tenancy.py
-agentspring/orchestration.py
 agentspring/task_base.py
 agentspring/tasks.py
 agentspring.egg-info/PKG-INFO
@@ -27,13 +25,10 @@ agentspring/goals/__init__.py
 agentspring/llm/__init__.py
 agentspring/llm/base.py
 agentspring/llm/registry.py
+agentspring/loop/__init__.py
+agentspring/memory/__init__.py
+agentspring/planner/__init__.py
 agentspring/tools/__init__.py
-agentspring/tools/business.py
-agentspring/tools/communication.py
-agentspring/tools/data_storage.py
-agentspring/tools/media.py
-agentspring/tools/system.py
-agentspring/tools/web_search.py
 agentspring/workflow/__init__.py
 tests/__init__.py
 tests/test_agent_workflow.py
@@ -49,14 +44,6 @@ tests/test_llm_providers.py
 tests/test_metrics.py
 tests/test_models.py
 tests/test_multi_tenancy.py
-tests/test_orchestration.py
 tests/test_quickstart.py
 tests/test_scenarios.py
 tests/test_tasks.py
-tests/test_tools_business.py
-tests/test_tools_communication.py
-tests/test_tools_data_storage.py
-tests/test_tools_init.py
-tests/test_tools_media.py
-tests/test_tools_system.py
-tests/test_tools_web_search.py
