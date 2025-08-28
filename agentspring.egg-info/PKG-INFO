@@ -40,285 +40,387 @@ Dynamic: summary
 
 # AgentSpring
 
-AgentSpring is a Python framework for building, deploying, and managing agentic APIs and agentic workflows with minimal code and maximum flexibility.
+AgentSpring is a **Python framework** for building, deploying, and operating **agentic APIs** and **agent-driven workflows** with minimal boilerplate and lots of hooks for production use.
 
-## 🚀 What is AgentSpring?
-AgentSpring lets you build both:
-- **Traditional APIs** using FastAPIAgent (for classic RESTful endpoints)
-- **Agentic Orchestration**: Dynamically parse natural language prompts into multi-step tool workflows using LLMs and a tool registry
+> **TL;DR:** You get a batteries‑included FastAPI “agent app,” a tool registry, an LLM provider system (sync/async & streaming), optional Celery/Redis for async jobs, Prometheus metrics, JSON logging, and a simple DAG‑style workflow engine.
 
+---
 
-## 🧠 Agentic Orchestration Example
-AgentSpring supports prompt-driven, multi-step workflows:
+## 🧭 Why AgentSpring?
+
+* **API-first agents**: Ship a FastAPI app with standard health, metrics, and async task endpoints.
+* **Tools + Workflows**: Register tools with schemas/permissions and compose them in a lightweight workflow engine.
+* **LLM integration**: Provider registry + base class with retries, rate limiting, validation, and streaming.
+* **Production touches**: Auth (API key), RBAC helpers, multi‑tenancy primitives, Prometheus metrics, JSON logs, Sentry hooks.
+* **Boring‑but‑useful**: Docker Compose + Kubernetes manifests to help you run locally or in a cluster.
+
+> **Note:** Earlier docs mentioned an `orchestration.py` module. The current codebase uses a **`workflow`** module instead. This README reflects the actual files in the repo.
+
+---
+
+## 📦 Project Structure (what’s actually here)
+
+```
+agentspring/
+├── agentspring/                      # Framework package
+│   ├── __init__.py                   # Extension hooks (admin panels, metrics, background tasks)
+│   ├── api.py                        # FastAPIAgent, Auth middleware, RBAC, std endpoints
+│   ├── api_versioning.py             # API version manager + router + request/response transforms
+│   ├── app_loader.py                 # Loads an app module via AGENTSPRING_APP (factory-style)
+│   ├── audit.py                      # Audit logging helper
+│   ├── celery_app.py                 # Celery config (broker/backend via env)
+│   ├── cli.py                        # `python -m agentspring.cli create-app <Name>`
+│   ├── logging_config.py             # JSON logging to ./logs with PII scrubbing
+│   ├── metrics.py                    # Prometheus counters/histograms and /metrics route helper
+│   ├── models.py                     # Pydantic request/response + validators
+│   ├── multi_tenancy.py              # Tenant router + Redis‑backed manager
+│   ├── task_base.py                  # (stub)
+│   ├── tasks.py                      # AsyncTaskManager + batch helpers (Celery)
+│   ├── tools/__init__.py             # ToolRegistry + @tool decorator + parameter validation
+│   ├── llm/
+│   │   ├── __init__.py               # Public LLM API (exports base + registry)
+│   │   ├── base.py                   # LLMProvider base: sync/async, streaming, retries, rate limits
+│   │   └── registry.py               # LLMRegistry: register/get/list providers
+│   ├── agent/__init__.py             # Base Agent + @agent_tool decorator for methods
+│   └── workflow/__init__.py          # DAG‑style workflow engine (alpha)
+├── examples/
+│   └── workflow_example.py           # LLM→plan→tool execution demo (uses Ollama)
+├── k8s/                              # Kubernetes manifests (app, worker, redis, config, secrets)
+├── docker-compose.yml                # Minimal stack (app, redis, optional ollama)
+├── docker-compose.full.yml           # Full stack (app, redis, prometheus, grafana, *log shippers*)
+├── prometheus.yml                    # Prometheus scrape config
+├── filebeat.yml                      # Filebeat -> Logstash (sample; Logstash not included)
+├── promtail-config.yaml              # Promtail -> Loki (sample; Loki not included)
+└── README.md                         # (this)
+```
+
+---
+
+## 🚀 Quickstart (local, no Docker)
+
+### 1) Install
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+```
+
+### 2) Minimal app
+
+Create `main.py`:
 
 ```python
-from agentspring.orchestration import create_orchestrator, set_prompt_template
+from agentspring.api import FastAPIAgent
+from agentspring.metrics import setup_metrics
 
-# (Optional) Set a custom prompt template for your domain
-set_prompt_template("""
-You are an expert workflow orchestrator. Given a user instruction, output a JSON list of tool steps.
-Only use these tools: {tools_list}
-User instruction: {prompt}
-""")
+agent = FastAPIAgent(title="AgentSpring Demo")
+app = agent.get_app()
+setup_metrics(app)  # exposes /metrics
 
-orchestrator = create_orchestrator()
-user_prompt = "Download the latest sales data, validate it, generate a report, and notify analytics."
-result = orchestrator.execute_prompt(user_prompt)
+# Example custom endpoint
+@agent.app.get("/hello")
+def hello():
+    return {"message": "Hello from AgentSpring"}
+```
+
+Run it:
+
+```bash
+export API_KEY=demo-key   # header name is x-api-key
+uvicorn main:app --reload
+```
+
+### 3) Smoke test
+
+```bash
+curl -H "x-api-key: $API_KEY" http://localhost:8000/health
+curl -H "x-api-key: $API_KEY" http://localhost:8000/readiness
+curl -H "x-api-key: $API_KEY" http://localhost:8000/liveness
+```
+
+Open docs at `http://localhost:8000/docs` and metrics at `http://localhost:8000/metrics` (Prometheus text format).
+
+---
+
+## 🔐 Auth & RBAC
+
+* **API key**: All protected endpoints expect `x-api-key` to match the value from the `API_KEY` env var (`demo-key` default).
+* **Roles**: A helper `require_role("admin"|"user")` is provided. It reads the role from the `x-role` header and returns 403 if not sufficient.
+
+Example RBAC usage:
+
+```python
+from fastapi import Depends
+from agentspring.api import FastAPIAgent
+
+agent = FastAPIAgent()
+app = agent.get_app()
+require_role = agent.require_role
+
+@app.post("/secure-endpoint", dependencies=[Depends(require_role("admin"))])
+def secure(payload: dict):
+    return {"ok": True}
+```
+
+---
+
+## 📊 Metrics & Logging
+
+* **Prometheus**: `metrics.setup_metrics(app)` installs an HTTP middleware to count requests and exposes `/metrics`.
+
+  * Key series include `api_requests_total` (method, endpoint, http\_status) and histograms for tool execution.
+* **Logging**: `logging_config.setup_logging()` outputs **JSON logs** into `./logs/agentspring.log` with basic PII/secret scrubbing.
+* **Sentry**: If `SENTRY_DSN` is set, both the web app and Celery worker capture exceptions.
+
+---
+
+## 📮 Async Tasks (Celery + Redis)
+
+Enable background jobs and polling endpoints.
+
+1. Start Redis (local or Docker) and set env vars:
+
+```bash
+export CELERY_BROKER_URL=redis://localhost:6379/0
+export CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+2. Start a Celery worker:
+
+```bash
+celery -A agentspring.celery_app.celery_app worker --loglevel=info
+```
+
+3. Your API app (created via `FastAPIAgent`) will automatically register:
+
+   * `POST /analyze/async` → returns a task id (demo stub)
+   * `GET  /tasks/{task_id}/status`
+   * `GET  /tasks/{task_id}/result`
+   * `GET  /tenants/{tenant_id}/tasks/{task_id}/status` (tenant‑aware variant)
+
+Programmatic submission:
+
+```python
+from celery import shared_task
+from agentspring.tasks import AsyncTaskManager
+from agentspring.celery_app import celery_app
+
+@shared_task
+def heavy(x: int) -> int:
+    return x * x
+
+manager = AsyncTaskManager(celery_app)
+job_id = manager.submit_task(heavy, 12)
+status = manager.get_task_status(job_id)
+```
+
+---
+
+## 🛠 Tools (registry + decorator)
+
+Register callable tools with schemas/permissions and execute them by name.
+
+```python
+from agentspring.tools import tool, tool_registry
+
+@tool("read_file", description="Read a local file")
+def read_file(path: str) -> dict:
+    return {"content": open(path).read()}
+
+# Introspection
+print(tool_registry.list_tools())          # ["read_file", ...]
+print(tool_registry.get_all_schemas())     # {"read_file": ToolSchema(...)}
+
+# Direct execution
+res = tool_registry.execute_tool("read_file", path="README.md")
+print(res.success, res.result)
+```
+
+* The registry validates parameters, maps names, and records execution time.
+* Unknown parameters are **warned** but do not crash by default.
+
+---
+
+## 🤖 LLM Provider System
+
+A thin but robust abstraction for plugging different LLM backends.
+
+**What you get:**
+
+* Base `LLMProvider` with `generate`/`generate_async` and `stream`/`stream_async` methods
+* Tenacity‑based retries, error classification, and **rate limiting** with automatic backoff
+* Input validation (length/emptiness) and structured exceptions (`LLMError`, `RateLimitError`)
+* A simple `LLMRegistry` to register and fetch providers
+
+**Implement a provider:**
+
+```python
+from agentspring.llm.base import LLMProvider, ProviderConfig
+
+class MyLLM(LLMProvider):
+    def __init__(self):
+        super().__init__(config=ProviderConfig(model="my-model"))
+
+    async def generate_async(self, prompt: str, **kwargs) -> str:
+        # call your backend here, return text
+        return "hello world"
+```
+
+**Use via the registry:**
+
+```python
+from agentspring.llm import LLMRegistry
+
+LLMRegistry.register_provider("mine", MyLLM)
+provider = LLMRegistry.get_provider("mine")
+print(provider.generate("Say hi"))
+```
+
+For a full, end‑to‑end demo using **Ollama** + tool planning, see `examples/workflow_example.py`.
+
+---
+
+## 🧱 Workflow Engine (alpha)
+
+Model multi‑step processes as a small DAG and execute them asynchronously.
+
+```python
+import asyncio
+from agentspring.workflow import Workflow, NodeType
+from agentspring.tools import tool, tool_registry
+
+@tool("sum", "Sum numbers")
+async def sum_numbers(values: list[int]) -> int:
+    return sum(values)
+
+wf = Workflow(workflow_id="wf1", name="Demo")
+wf.tools = tool_registry  # use the global registry
+wf.add_node(
+    node_id="step1",
+    node_type=NodeType.TOOL,
+    config={"tool_name": "sum", "parameters": {"values": [1,2,3]}},
+)
+
+result = asyncio.run(wf.execute())
 print(result)
 ```
 
-## 🛠️ Tool Registry System
-AgentSpring provides a modular tool registry with production-ready tools for communication, data, web, business, media, and system operations.
+* Node types include **AGENT**, **TOOL**, **CONDITION**, **PARALLEL**, **SEQUENCE** (some are TODOs).
+* Dependencies are topologically sorted; each node records status, timing, and errors.
+
+> The earlier “orchestrator” mention in older drafts has been replaced with this `workflow` engine.
+
+---
+
+## 👥 Multi‑Tenancy (primitives)
+
+* `multi_tenancy.TenantManager` stores tenant configs (API keys, features, limits) in Redis.
+* A **tenant router** provides CRUD endpoints:
+
+  * `POST /tenants`, `GET /tenants`, `GET /tenants/{id}`, `PUT /tenants/{id}`, `DELETE /tenants/{id}`
+* You can include the router in your app:
 
 ```python
-from agentspring.tools import tool_registry
-result = tool_registry.execute_tool("read_file", file_path="README.md")
-print(result.result["content"])
+from fastapi import Depends
+from agentspring.multi_tenancy import tenant_router
+from agentspring.api import FastAPIAgent
+
+agent = FastAPIAgent()
+app = agent.get_app()
+app.include_router(tenant_router, prefix="/admin")
 ```
 
-See [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md) for setup and configuration details.
+---
 
-## 🎯 Why Use AgentSpring?
-- **Agentic Orchestration**: Turn natural language into multi-step workflows
-- **Traditional APIs**: Use FastAPIAgent for classic REST endpoints
-- **Production Ready**: Health checks, metrics, authentication, error handling, multi-tenancy, async, batch, and more
-- **Extensible**: Register your own tools, customize prompt templates, and build domain-specific agents
-- **See the [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md) for the vision and roadmap**
+## 🔢 API Versioning
 
-## 📁 Project Structure
-```
-agentspring/
-├── agentspring/                # Framework code
-│   ├── api.py                  # API helpers (FastAPIAgent, metrics, auth)
-│   ├── orchestration.py        # Agentic orchestration engine
-│   ├── tools/                  # Tool registry (communication, data, system, etc)
-│   ├── llm.py                  # LLM integration helpers
-│   ├── models.py               # Base models and validation
-│   ├── tasks.py                # Async task management
-│   ├── celery_app.py           # Celery configuration
-│   ├── multi_tenancy.py        # Multi-tenant support
-│   └── api_versioning.py       # API versioning
-├── examples/
-│   ├── / # Full-featured example
+`api_versioning.py` provides:
+
+* An `APIVersion` enum and a `VersionManager` (register versions, mark deprecated/sunset dates)
+* Request/response transformers to keep old clients working
+* A `create_versioned_router("/api")` helper exposing:
+
+  * `GET /api/versions` (list, with latest), `GET /api/versions/{version}` (details)
+
+Transform your payloads per version:
+
+```python
+from agentspring.api_versioning import versioned_request, versioned_response
+
+req_v1 = versioned_request("v1", incoming_dict)
+resp   = versioned_response("v1", {"summary": "..."})
 ```
 
-=======
+---
 
-## 📝 Documentation
-- [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md): Tool registry and configuration
-- [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md): Roadmap to a fully agentic system
+## 🐳 Docker & Kubernetes
 
-
-## Documentation & Onboarding
-
-- Up-to-date README and quickstart guides
-- API docs available at `/docs` (Swagger UI) and `/redoc`
-- Create custom apps in the `agentspring/examples/` directory
-- Troubleshooting and FAQ sections in the README and [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md)
-
-## 🚀 Quickstart
-
-Get up and running with AgentSpring in minutes. You can run the application using Docker (recommended) or locally for development.
-
-### Running with Docker Compose
-
-This project includes two Docker Compose files for different use cases:
-
-1.  **Minimal Setup (`docker-compose.yml`)**
-    This runs the core application, including the FastAPI server and the Celery worker for background tasks. It's perfect for general development and testing the main application logic.
-
-    ```bash
-    # Start the core application
-    docker-compose up --build
-    ```
-
-2.  **Full Stack with Monitoring (`docker-compose.full.yml`)**
-    This runs the entire stack, including the application, Celery, Redis, and a full observability suite with **Prometheus**, **Grafana**, and **Loki**.
-
-    ```bash
-    # Start the full stack with monitoring
-    docker-compose -f docker-compose.full.yml up --build
-    ```
-
-### Running Locally
-
-For quick development, you can run the test application directly:
+### Docker Compose (minimal)
 
 ```bash
-# Install dependencies
-. venv/bin/activate
-pip install -r requirements.txt
-
-# Run the test server
-python examples/test_app.py
+docker-compose up --build
 ```
 
-The server will be available at `http://localhost:8000`.
+* Default command in the compose files expects an ASGI app (e.g. `main:app`). Create a `main.py` as in the Quickstart or edit the `command:` to point at your module.
+* Services: `app`, `redis`, and (optionally) `ollama` for the example workflow.
 
-## 📈 Observability & Monitoring
-
-AgentSpring is built for production and includes a comprehensive monitoring stack out of the box when using the `docker-compose.full.yml` file.
-
--   **Prometheus**: Collects application metrics. Access the Prometheus UI at `http://localhost:9090`.
--   **Grafana**: Visualizes the metrics collected by Prometheus. Access the Grafana dashboard at `http://localhost:3000` (login with `admin`/`admin`).
--   **Loki**: Aggregates logs from all services.
-
-### Key Metrics
-
-The application exposes key performance indicators at the `/metrics` endpoint, including:
--   `api_requests_total`: Total number of API requests, labeled by endpoint, method, and status code.
--   `tool_executions_total`: Tracks the number of tool executions.
--   `tool_execution_latency_seconds`: Measures the latency of tool executions.
-
-### Health Checks
--   `/health`: A simple endpoint to confirm the application is running.
-
-## 🏆 Why “AgentSpring”?
-
-The name **AgentSpring** draws inspiration from the renowned Spring framework in the Java ecosystem, celebrated for its modularity, extensibility, and developer productivity. Just as Spring enables rapid development and flexible architecture for Java applications, AgentSpring empowers developers to build robust, modular, and scalable agentic APIs and workflows with ease.
-
-## Contributing
-
-We welcome contributions! Please see `CONTRIBUTING.md` for guidelines, or open an issue to discuss your ideas.
-
-## Advanced Usage
-- See [AGENTIC_ROADMAP.md](AGENTIC_ROADMAP.md) for advanced features and future plans.
-- For extending the tool registry, see [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md).
-- For orchestration engine details, see `agentspring/orchestration.py` and the framework [README](agentspring/README.md).
-
-## Environment Variables
-- `AGENTSPRING_ENV`: Application environment (development, staging, production)
-- `SENTRY_DSN`: Sentry DSN for error monitoring
-- `LOG_DIR`: Directory for log files
-- `CELERY_BROKER_URL`: Redis URL for Celery broker
-- `CELERY_RESULT_BACKEND`: Redis URL for Celery result backend
-- `API_KEY`: API authentication key
-- `TENANT_ID`: (if multi-tenancy is used)
-- ... (see .env.example for more)
-
-## Deployment & Scalability
-
-### Docker Compose
-
-This project includes two Docker Compose files for different use cases:
-
-1.  **Minimal Setup (`docker-compose.yml`)**
-    This runs the core application, including the FastAPI server and the Celery worker for background tasks. It's perfect for general development and testing the main application logic.
-
-    ```bash
-    # Start the core application and scale services
-    docker-compose up --build --scale app=2 --scale celery_worker=2
-    ```
-
-2.  **Full Stack with Monitoring (`docker-compose.full.yml`)**
-    This runs the entire stack, including the application, Celery, Redis, and a full observability suite with **Prometheus**, **Grafana**, and **Loki**.
-
-    ```bash
-    # Start the full stack with monitoring
-    docker-compose -f docker-compose.full.yml up --build
-    ```
-
-### Kubernetes Deployment
-
-1. Create the config and secrets:
-   ```bash
-   kubectl apply -f k8s/configmap.yaml
-   kubectl apply -f k8s/secret.yaml
-   ```
-2. Deploy Redis:
-   ```bash
-   kubectl apply -f k8s/redis-deployment.yaml
-   ```
-3. Deploy the API app and Celery workers:
-   ```bash
-   kubectl apply -f k8s/app-deployment.yaml
-   kubectl apply -f k8s/celery-worker-deployment.yaml
-   ```
-4. Expose the API app:
-   ```bash
-   kubectl apply -f k8s/app-service.yaml
-   ```
-
-- The app will be available via the LoadBalancer IP.
-- Readiness/liveness probes are configured for production health.
-- Scale deployments by editing the `replicas` field.
-
-## Automated Testing & CI
-
-- All core features are covered by unit, integration, and end-to-end tests.
-- CI pipeline runs linting (`flake8`), tests (`pytest`), and enforces a minimum 80% coverage threshold.
-
-### Running Tests Locally
-
-```bash
-pip install -r requirements.txt
-# Makefile 'test' target will start Redis if needed
-make test
-# Or manually:
-pytest --cov=agentspring --cov-report=term-missing agentspring/tests/
-```
-
-### Linting
-
-```bash
-flake8 agentspring/
-```
-
-- All code must pass linting and coverage checks before merging.
-
-## Troubleshooting & FAQ
-
-### Docker/Kubernetes deployment issues
-- **App not starting:** Check logs for missing environment variables or secrets.
-- **Healthcheck failures:** Ensure Redis and Celery are healthy and reachable.
-- **Redis not running:** Start Redis with `docker-compose up redis` or ensure your local Redis server is running.
-
-### Redis/Celery connectivity
-- **Task status always pending:** Make sure a Celery worker is running and connected to the same Redis instance as the app.
-
-### API key/authentication errors
-- **401 Unauthorized:** Ensure the correct `API_KEY` is set in your environment and sent as the `x-api-key` header.
-- **403 Forbidden:** Check the `x-role` header and required role for the endpoint.
-
-### Test failures
-- **Coverage below threshold:** Add or improve tests for uncovered code.
-- **Linting errors:** Run `flake8` and fix reported issues.
-- **Redis connection errors:** Ensure Redis is running before running tests (see Makefile `test` target for automation).
-- **Pytest discovers endpoint functions as tests:** Ensure endpoint function names do not start with `test_`.
-- **Error response format mismatch:** Ensure the global exception handler returns JSON with `error`, `code`, and `timestamp` fields.
-
-For more, see [TOOL_CONFIGURATION.md](TOOL_CONFIGURATION.md).
-
-## Compliance & Auditability
-
-- Audit trails for user actions and data changes (all POST, PUT, DELETE requests are logged)
-- Data retention and privacy controls (see code stubs for extension)
-- Compliance documentation and configuration in TOOL_CONFIGURATION.md
-
-## Agentic Extensibility
-
-- Agent orchestration via `AgentOrchestrator` (see `agentspring/orchestration.py`)
-- All agent actions are logged to the audit trail
-- Supports pausing, inspecting, and debugging agent runs
-- Easily extensible for new agent workflows and interfaces
-
-## Full Stack Production-like Testing
-
-To run the full stack with all observability and monitoring tools (API, Celery, Redis, Prometheus, Grafana, Filebeat, Promtail):
+### Docker Compose (full observability)
 
 ```bash
 docker-compose -f docker-compose.full.yml up --build
 ```
 
-### Services and Ports
-- **API:** http://localhost:8000
-- **Prometheus:** http://localhost:9090
-- **Grafana:** http://localhost:3000 (admin/admin)
-- **Redis:** localhost:6379
-- **Filebeat/Promtail:** log shippers (no UI)
+Includes Prometheus and Grafana out of the box; log shippers are configured (Filebeat/Promtail). **You may need to add services** for Logstash/Loki to match the sample configs (`filebeat.yml`, `promtail-config.yaml`).
 
-- Logs are available in the ./logs directory.
-- Prometheus scrapes metrics from the API at /metrics.
-- Grafana dashboard is pre-provisioned (import if not visible).
+### Kubernetes
 
-This setup lets you test the entire system end-to-end as it would run in production.
+Manifests live in `k8s/`:
+
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/redis-deployment.yaml
+kubectl apply -f k8s/app-deployment.yaml
+kubectl apply -f k8s/celery-worker-deployment.yaml
+kubectl apply -f k8s/app-service.yaml
+```
+
+---
+
+## 🧪 Testing & Linting
+
+```bash
+pytest -q
+# or with coverage
+coverage run -m pytest && coverage report --fail-under=40
+```
+
+* Ruff/Black config lives in `pyproject.toml`.
+
+---
+
+## 🔧 Environment Variables
+
+* `API_KEY` – API auth key for `x-api-key` (default: `demo-key`)
+* `SENTRY_DSN` – Sentry DSN (optional)
+* `LOG_DIR` – logs directory (default: `./logs`)
+* `CELERY_BROKER_URL` – e.g., `redis://localhost:6379/0`
+* `CELERY_RESULT_BACKEND` – e.g., `redis://localhost:6379/0`
+* `AGENTSPRING_APP` – Python module path to load with `app_loader.py` (if you use that pattern)
+
+---
+
+## ❓ FAQ / Troubleshooting
+
+* **401 Unauthorized**: Ensure `x-api-key` matches `$API_KEY`.
+* **/metrics missing**: Call `setup_metrics(app)` or expose your own metrics route.
+* **Async task endpoints missing**: Ensure Redis is reachable and a Celery worker is running; FastAPIAgent registers task routes only when async is enabled.
+* **Docker Compose app won’t start**: Point `uvicorn` at your ASGI app (e.g., `main:app`), not a module that returns a module. The full compose’s `command:` is a template—adjust to your file.
+* **Grafana/Loki/Logstash issues**: The configs are provided as references; add the missing services or update endpoints to match your stack.
+
+---
+
+## 🤝 Contributing
+
+Issues and PRs welcome! Please run `pytest` and ensure formatting (Ruff/Black) before submitting.
+
