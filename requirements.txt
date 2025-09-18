@@ -1,31 +1,52 @@
-fastapi==0.104.1
-prometheus-client
-bleach
-fastapi-permissions
-sentry-sdk
-uvicorn
-pydantic
-redis==5.0.1
-celery==5.3.4
-requests==2.31.0
-httpx==0.27.0
-# Compatible langchain ecosystem versions
-langchain-core==0.1.48
-langchain-community==0.0.21
+# Core
+fastapi>=0.112.0
+uvicorn>=0.29.0
+pydantic>=2.8.2
+pydantic-settings>=2.4.0
+structlog>=24.1.0
+sqlalchemy
 
-# Optional dependencies for real implementations
-#psycopg2-binary==2.9.9
-PyPDF2==3.0.1
-#Pillow==10.1.0
-pytesseract==0.3.10
-python-docx==1.1.0
-twilio==8.0.0
-google-api-python-client==2.108.0
-google-auth-httplib2==0.2.0
-google-auth-oauthlib==1.2.2
-#openai-whisper==20231117
-python-json-logger
-structlog
-python-dotenv
-flake8
-alembic
+# Providers
+openai>=1.40.0
+anthropic>=0.34.2
+tiktoken>=0.7.0
+
+# HTTP & parsing
+httpx>=0.27.0
+beautifulsoup4>=4.12.3
+
+# DB & vectors
+SQLAlchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+pgvector>=0.2.5
+alembic>=1.13.2
+
+# Cache / background
+redis>=5.0.7
+celery>=5.4.0
+fastapi-limiter>=0.1.6
+
+# Observability
+prometheus_client>=0.20.0
+opentelemetry-sdk>=1.25.0
+opentelemetry-instrumentation-fastapi>=0.46b0
+opentelemetry-exporter-otlp>=1.25.0
+sentry-sdk>=2.13.0
+
+# Auth & uploads
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.9
+
+# Ingestion
+pypdf>=4.3.1
+boto3>=1.34.162
+google-cloud-storage>=2.17.0
+
+# Tests & lint
+pytest>=8.3.2
+pytest-asyncio>=0.23.8
+ruff>=0.6.8
+
+# Misc
+tenacity>=9.0.0
+python-dotenv>=1.0.1

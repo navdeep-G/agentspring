@@ -1,58 +1,59 @@
+version: "3.9"
 services:
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentspring
+    ports: ["5432:5432"]
     healthcheck:
-      test: ["CMD", "true"]
-    restart: unless-stopped
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
 
   app:
-    build: .
-    command: uvicorn agentspring.api:app --host 0.0.0.0 --port 8000
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
+    build: { context: ., dockerfile: Dockerfile }
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-06-01}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/agentspring
+      REDIS_URL: redis://redis:6379/0
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-changeme-admin}
+      API_KEY: ${API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      ALLOWLIST_DOMAINS: ${ALLOWLIST_DOMAINS:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
+    ports: ["8000:8000"]
     depends_on:
-      ollama:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    deploy:
-      replicas: 2
-  celery_worker:
-    build: .
-    command: celery -A agentspring.celery_app.celery_app worker --loglevel=info
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    depends_on:
-      ollama:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    deploy:
-      replicas: 2
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5 
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    command: >
+      bash -lc "python scripts/init_db.py &&
+            uvicorn agentspring.api:app --host 0.0.0.0 --port 8000"
 
-volumes:
-  ollama-data:
+
+  worker:
+    build: { context: ., dockerfile: Dockerfile }
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/agentspring
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    command: celery -A agentspring.celery_app.celery_app worker -l INFO
+
+  console:
+    build: { context: ., dockerfile: docker/console/Dockerfile.console }
+    ports: ["8080:80"]
+    depends_on: [app]

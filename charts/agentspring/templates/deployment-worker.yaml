@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentspring.fullname" . }}-worker
+spec:
+  replicas: {{ .Values.workerReplicaCount }}
+  selector:
+    matchLabels: { app: {{ include "agentspring.name" . }}, component: worker }
+  template:
+    metadata:
+      labels: { app: {{ include "agentspring.name" . }}, component: worker }
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $k, $v in .Values.env }}
+            - name: {{ $k }}
+              value: "{{ $v }}"
+            {{- end }}
+          command: ["celery","-A","agentspring.celery_app.celery_app","worker","-l","INFO"]

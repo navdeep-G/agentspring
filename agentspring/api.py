@@ -1,402 +1,319 @@
-"""
-API Helpers for AgentSpring
-"""
+import json, uuid
+from fastapi import FastAPI, Depends, Header, HTTPException, Query, UploadFile, File, Form, Body
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
+from .metrics import setup_metrics
+from .observability import setup_logging, setup_tracing, setup_sentry
+from .rate_limit import setup_rate_limiter
+from .config import settings
+from .llm.providers import mock as _reg0  # noqa  (registers the mock provider)
+from .llm.providers import openai as _reg1  # noqa
+from .llm.providers import azure_openai as _reg2  # noqa
+from .llm.providers import anthropic as _reg3  # noqa
+from .tools import builtin_http, builtin_math, builtin_embeddings, builtin_rag  # noqa
+from .planner import Planner
+from .workflow import Workflow
+from .multi_tenancy import get_tenant_by_api_key, create_tenant, create_tenant_user, list_tenant_users, delete_tenant_user
+from fastapi_limiter.depends import RateLimiter
+from .db.session import SessionLocal
+from .db import models_versioned as _mv  # ensure tables registered
+from .db.models import Run
+from .auth_oidc import verify_bearer, OIDCError
+from .ingestion import extract_text, chunk_text
+from .tasks_ingest import ingest_s3_task, ingest_gcs_task
+from .rag_versioned import ensure_collection, bump_version, upsert_chunk, retrieve_chunks
+from .uploads_sign import s3_sign_post, gcs_sign_put
+# near other imports in api.py
+from .tools import delegate, agents_catalog, router, critic, consensus  # noqa: F401
 
-import os
-from datetime import datetime
-from functools import wraps
-from typing import Callable, Optional
+app = FastAPI(title="AgentSpring — Final Bundle")
+setup_metrics(app)
 
-import bleach
+from agentspring.middleware.agent_depth import AgentDepthMiddleware
+app.add_middleware(AgentDepthMiddleware)
 
-# Sentry integration
-import sentry_sdk
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Request,
-    status,
-)
-from fastapi.responses import JSONResponse, Response
-from fastapi_permissions import (
-    Allow,
-    Authenticated,
-    Deny,
-)
+from fastapi import HTTPException, Body
+from fastapi.responses import JSONResponse
+from .tools import registry as tool_registry
 
-from agentspring.tasks import AsyncTaskManager
+@app.get("/v1/tools")
+async def list_tools():
+    return sorted(tool_registry.keys())
 
-from .logging_config import setup_logging
-from .metrics import REQUEST_COUNTER, get_metrics
+# at top with other imports
+import inspect
+from anyio import to_thread
+from fastapi import HTTPException, Body, Request
+from fastapi.responses import JSONResponse
+from .tools import registry as tool_registry
+from inspect import Parameter
 
-SENTRY_DSN = os.getenv("SENTRY_DSN")
-if SENTRY_DSN:
-    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=0.0)
-
-logger = setup_logging()
-
-
-# Example: Centralized error handler for API endpoints
-def log_api_error(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            user = kwargs.get("user", "unknown")
-            request_id = kwargs.get("request_id", "unknown")
-            tenant_id = kwargs.get("tenant_id", "unknown")
-            logger.error(
-                f"API error: {str(e)}",
-                extra={
-                    "user": user,
-                    "request_id": request_id,
-                    "tenant_id": tenant_id,
-                    "error_type": type(e).__name__,
-                },
-            )
-            if SENTRY_DSN:
-                sentry_sdk.capture_exception(e)
-            raise
-
-    return wrapper
-
-
-class AuthMiddleware:
-    """API Key authentication middleware"""
-
-    def __init__(
-        self, api_key_env: str = "API_KEY", default_key: str = "demo-key"
-    ):
-        self.api_key = os.getenv(api_key_env, default_key)
-
-    def __call__(self, x_api_key: str = Header(...)):
-        if x_api_key != self.api_key:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid API Key",
-            )
-        return x_api_key
-
-
-class FastAPIAgent:
-    """Base FastAPI agent class with all AgentSpring standard endpoints pre-registered.
-    Users should only add their own endpoints to self.app or agent.get_app().
-    """
-
-    def __init__(
-        self, title: str = "AgentSpring Agent", api_key_env: str = "API_KEY"
-    ):
-        self.app = FastAPI(title=title)
-        self.auth_middleware = AuthMiddleware(api_key_env)
-        self.async_task_manager = self._initialize_async_tasks()
-
-        # Setup common middleware and error handlers
-        self._setup_error_handlers()
-        self.app.middleware("http")(self.track_requests)
-
-        # Register all standard endpoints
-        self._register_standard_endpoints()
-
-    def _initialize_async_tasks(self):
-        """Safely initialize the AsyncTaskManager if celery is configured."""
-        try:
-            from agentspring.celery_app import celery_app
-
-            return AsyncTaskManager(celery_app)
-        except (ImportError, Exception) as e:
-            logger.warning(
-                f"Could not initialize AsyncTaskManager: {e}. Running without async task support."
-            )
-            return None
-
-        # --- Scaffolded endpoints for test and coverage completeness ---
-        @self.app.post("/analyze")
-        async def analyze(data: dict, x_api_key: str = Header(...)):
-            # Dummy analysis response
-            return {
-                "data": {
-                    "summary": "This is a dummy summary.",
-                    "category": "General",
-                    "priority": "Normal",
-                },
-                "status": "completed",
-            }
-
-        @self.app.post("/analyze/async")
-        async def analyze_async(data: dict, x_api_key: str = Header(...)):
-            # Dummy async response
-            return {"task_id": "dummy-task-id-123", "status": "submitted"}
-
-        @self.app.get("/admin/metrics")
-        async def admin_metrics(x_api_key: str = Header(...)):
-            # Dummy metrics response
-            return {
-                "total_requests": 100,
-                "successful_requests": 95,
-                "failed_requests": 5,
-                "average_response_time": 0.123,
-            }
-
-        @self.app.get("/admin/workers")
-        async def admin_workers(x_api_key: str = Header(...)):
-            # Dummy workers response
-            return [
-                {"worker_id": "worker-1", "status": "active"},
-                {"worker_id": "worker-2", "status": "idle"},
-            ]
-
-        @self.app.get("/task/{task_id}")
-        async def get_task_status(task_id: str, x_api_key: str = Header(...)):
-            if task_id == "dummy-task-id-123":
-                return {
-                    "status": "completed",
-                    "result": {
-                        "summary": "This is a dummy async analysis result.",
-                        "classification": "General",
-                    },
-                }
-            return {"status": "pending"}
-
-    def _register_standard_endpoints(self):
-        # RBAC: Define roles and permissions
-
-        def get_current_role(x_role: str = Header("guest")):
-            return x_role
-
-        def require_role(required_role: str):
-            def role_checker(role: str = Depends(get_current_role)):
-                if role != required_role:
-                    raise HTTPException(
-                        status_code=403, detail="Forbidden: insufficient role"
-                    )
-                return role
-
-            return role_checker
-
-        # Standard endpoints
-        if self.async_task_manager:
-
-            @self.app.get(
-                "/tasks/{task_id}/status",
-                dependencies=[
-                    Depends(self.auth_middleware),
-                    Depends(require_role("user")),
-                ],
-            )
-            def get_task_status(task_id: str):
-                status = self.async_task_manager.get_task_status(task_id)
-                return status
-
-            @self.app.get(
-                "/tasks/{task_id}/result",
-                dependencies=[
-                    Depends(self.auth_middleware),
-                    Depends(require_role("user")),
-                ],
-            )
-            def get_task_result(task_id: str):
-                status = self.async_task_manager.get_task_status(task_id)
-                if status["status"] == "SUCCESS":
-                    return {"result": status["result"]}
-                elif status["status"] == "FAILURE":
-                    return {"error": status.get("error", "Task failed")}
-                else:
-                    return {"status": status["status"]}
-
-            @self.app.get(
-                "/tenants/{tenant_id}/tasks/{task_id}/status",
-                dependencies=[
-                    Depends(self.auth_middleware),
-                    Depends(require_role("user")),
-                ],
-            )
-            def get_tenant_task_status(
-                tenant_id: str, task_id: str, x_api_key: str = Header(...)
-            ):
-                tenant = tenant_manager.get_tenant_by_id(tenant_id)
-                if not tenant:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="Tenant not found. By default, only tenant_id='default' exists. See /tenants for available tenants.",
-                    )
-                if not tenant.active:
-                    raise HTTPException(
-                        status_code=403, detail="Tenant is inactive"
-                    )
-                if tenant.api_key != x_api_key:
-                    raise HTTPException(
-                        status_code=401, detail="Invalid API key for tenant"
-                    )
-                return self.async_task_manager.get_task_status(task_id)
-
-        @self.app.get("/health", tags=["Health"])
-        def health():
-            redis_status = "disconnected"
-            if self.async_task_manager:
-                try:
-                    # Access the client through the backend
-                    self.async_task_manager.celery_app.backend.client.ping()
-                    redis_status = "connected"
-                except Exception:
-                    redis_status = "disconnected"
-            return {"status": "healthy", "redis": redis_status}
-
-        @self.app.get("/readiness")
-        def readiness():
-            # Add readiness logic as needed
-            return {"status": "ready"}
-
-        @self.app.get("/liveness")
-        def liveness():
-            return {"status": "alive"}
-
-        @self.app.get("/metrics")
-        def metrics():
-            return Response(get_metrics(), media_type="text/plain")
-
-        # Add any other standard endpoints here
-
-    def _setup_error_handlers(self):
-        """Setup common error handlers"""
-
-        @self.app.exception_handler(Exception)
-        async def global_exception_handler(request: Request, exc):
-            # User-friendly error response with error code
-            error_code = getattr(exc, "code", "INTERNAL_ERROR")
-            user_message = "An unexpected error occurred."
-            detail = str(exc)
-            logger.error(
-                f"API unhandled exception: {detail}",
-                extra={
-                    "user": getattr(request.state, "user", "unknown"),
-                    "request_id": getattr(
-                        request.state, "request_id", "unknown"
-                    ),
-                    "tenant_id": getattr(
-                        request.state, "tenant_id", "unknown"
-                    ),
-                    "error_type": type(exc).__name__,
-                },
-            )
-            if SENTRY_DSN:
-                sentry_sdk.capture_exception(exc)
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "error": user_message,
-                    "code": error_code,
-                    "detail": detail,
-                    "timestamp": datetime.now().isoformat(),
-                },
-            )
-
-    async def track_requests(self, request: Request, call_next):
-        """Middleware to track API requests and update Prometheus metrics."""
-        response = await call_next(request)
-        # Get the endpoint path from the request's route, if it exists
-        endpoint = "/path/not/found"
-        for route in request.app.routes:
-            match, _ = route.matches(request.scope)
-            if match:
-                endpoint = route.path
-                break
-
-        REQUEST_COUNTER.labels(
-            method=request.method,
-            endpoint=endpoint,
-            http_status=response.status_code,
-        ).inc()
-        return response
-
-    def get_app(self) -> FastAPI:
-        """Get the FastAPI app instance"""
-        return self.app
-
-
-def standard_endpoints(
-    app: FastAPI,
-    task_manager: Optional[AsyncTaskManager],
-    batch_func: Optional[Callable] = None,
+@app.post("/v1/tools/{name}")
+async def call_tool(
+    name: str,
+    request: Request,
+    payload: dict = Body(...),
 ):
-    """
-    Register standard async and batch endpoints to the app.
-    - /task/{task_id}: Get async task status
-    - /batch: Submit a batch of items (if batch_func provided)
-    """
-    router = APIRouter()
+    fn = tool_registry.get(name)
+    if not fn:
+        raise HTTPException(status_code=404, detail=f"Unknown tool '{name}'")
 
-    @router.get("/task/{task_id}")
-    async def get_task_status(task_id: str):
-        return task_manager.get_task_status(task_id)
+    caller_headers = {"X-API-Key": request.headers.get("x-api-key")}
 
-    if batch_func:
+    # Build kwargs only with params the tool supports
+    params = inspect.signature(fn).parameters
+    accepts_var_kw = any(p.kind == Parameter.VAR_KEYWORD for p in params.values())
 
-        @router.post("/batch")
-        async def submit_batch(items: list):
-            task_id = batch_func(items)
-            return {"task_id": task_id, "status": "processing"}
+    call_kwargs = dict(payload or {})
+    if "__caller_headers__" in params or accepts_var_kw:
+        call_kwargs["__caller_headers__"] = caller_headers
 
-    app.include_router(router)
-
-
-# Remove global app instance. All endpoints are now registered via FastAPIAgent.
-
-
-# @log_api_error
-# def test_error_endpoint(user: str = 'test-user', request_id: str = 'test-req', tenant_id: str = 'test-tenant'):
-#     raise ValueError('This is a test error for logging.')
-
-# app.add_api_route('/test-error', test_error_endpoint, methods=['GET'])
-
-# Add /task-status/{task_id} endpoint
-from agentspring.multi_tenancy import tenant_manager
-
-# RBAC: Define roles and permissions
-ROLES = {
-    "admin": [Allow, Authenticated],
-    "user": [Allow],
-    "guest": [Deny],
-}
-
-
-def get_current_role(x_role: str = Header("guest")):
-    return x_role
-
-
-def require_role(required_role: str):
-    def role_checker(role: str = Depends(get_current_role)):
-        if role != required_role:
-            raise HTTPException(
-                status_code=403, detail="Forbidden: insufficient role"
+    try:
+        if inspect.iscoroutinefunction(fn):
+            result = await fn(**call_kwargs)               # async tool
+        else:
+            result = await to_thread.run_sync(             # sync tool
+                lambda: fn(**call_kwargs)
             )
-        return role
+    except TypeError as e:
+        raise HTTPException(status_code=400, detail=f"Bad args for '{name}': {e}")
+    except Exception as e:
+        # Let FastAPI show a 500 with the message
+        raise
 
-    return role_checker
+    return JSONResponse({"tool": name, "output": result}, status_code=200)
 
+# CORS for console
+if settings.CORS_ALLOWED_ORIGINS:
+    origins = [o.strip() for o in settings.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 
-# Input sanitization utility
-def sanitize_input(data: str) -> str:
-    return bleach.clean(data)
+@app.on_event("startup")
+async def on_startup():
+    setup_logging(); setup_sentry(); setup_tracing("agentspring"); await setup_rate_limiter(app)
 
+def oidc_required(authorization: Optional[str] = Header(None, alias="Authorization")):
+    if settings.REQUIRE_OIDC:
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise HTTPException(401, "Bearer token required")
+        token = authorization.split(" ",1)[1]
+        try: claims = verify_bearer(token)
+        except OIDCError as e: raise HTTPException(401, f"Invalid token: {e}")
+        return claims
+    return None
 
-# Utility for data retention and privacy controls (stub)
-def enforce_data_retention():
-    # Implement data retention logic here
-    pass
+def tenant_dep(x_api_key: Optional[str] = Header(None, alias="X-API-Key"), claims=Depends(oidc_required)) -> dict:
+    if settings.API_KEY:
+        if x_api_key != settings.API_KEY: raise HTTPException(401, "Invalid API key")
+        return {"id":"dev-tenant","name":"dev","role":"admin"}
+    if not x_api_key: raise HTTPException(401, "Missing X-API-Key")
+    return {"api_key": x_api_key}
 
+async def resolve_tenant(tenant_hint: dict):
+    if "id" in tenant_hint: return tenant_hint
+    t = await get_tenant_by_api_key(tenant_hint["api_key"])
+    if not t: raise HTTPException(401, "Invalid API key")
+    return {"id": t["id"], "name": t["name"], "role": t.get("role","viewer")}
 
-def enforce_privacy_controls():
-    # Implement privacy controls here
-    pass
+def require_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")):
+    if not settings.ADMIN_API_KEY or x_admin_key != settings.ADMIN_API_KEY: raise HTTPException(403, "Admin key required")
+    return True
 
+@app.get("/health")
+async def health():
+    return {"ok": True}
 
-# Example usage in an endpoint:
-# @app.post('/secure-endpoint', dependencies=[Depends(require_role('admin'))])
-# async def secure_endpoint(payload: dict, user: str = Depends(get_current_role)):
-#     sanitized = {k: sanitize_input(v) if isinstance(v, str) else v for k, v in payload.items()}
-#     audit_log('secure_endpoint_called', user, sanitized)
-#     ...
+@app.get("/v1/providers")
+async def list_providers():
+    return ["openai", "azure_openai", "anthropic"]
+@app.get("/v1/tools", dependencies=[Depends(RateLimiter(times=20, seconds=60))])
+async def list_tools(tenant=Depends(tenant_dep)):
+    fns=tool_registry.to_openai_functions(); return [{"name":f["function"]["name"],"description":f["function"]["description"]} for f in fns]
+
+@app.post("/v1/agents/run", dependencies=[Depends(RateLimiter(times=1, seconds=1))])
+async def run_agent(body: dict, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint); prompt = body.get("prompt") or ""; provider = body.get("provider") or settings.DEFAULT_PROVIDER; stream=bool(body.get("stream"))
+    planner=Planner(tools=tool_registry, provider_name=provider); plan=await planner.plan_async(prompt,prompt,str(uuid.uuid4()),"ad-hoc")
+    wf:Workflow=planner.build_workflow(plan, default_input=prompt, workflow_id=plan.workflow_id, name=plan.name)
+    async with SessionLocal() as s:
+        run=Run(tenant_id=uuid.UUID(tenant["id"]), input=prompt, status="running"); s.add(run); await s.commit(); await s.refresh(run); run_id=str(run.id)
+    async def gen():
+        try:
+            async for event in wf.execute_stream():
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            async with SessionLocal() as s2:
+                r = await s2.get(Run, uuid.UUID(run_id))
+                if r: r.output=wf.outputs; r.status="done"; await s2.commit()
+            yield f"data: {json.dumps({'type':'done','run_id': run_id})}\n\n"
+    if stream: return StreamingResponse(gen(), media_type="text/event-stream")
+    else:
+        async for _ in wf.execute_stream(): pass
+        return {"run_id": run_id, "result": wf.outputs, "plan": plan.model_dump()}
+
+@app.get("/v1/runs")
+async def list_runs(limit: int = 20, offset: int = 0, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    async with SessionLocal() as s:
+        rows = await s.execute("""SELECT id, status, created_at FROM runs WHERE tenant_id = :tid ORDER BY created_at DESC LIMIT :lim OFFSET :off""", {"tid": uuid.UUID(tenant["id"]), "lim": limit, "off": offset})
+        items = [dict(id=str(r[0]), status=r[1], created_at=r[2].isoformat()) for r in rows]
+    return {"items": items, "limit": limit, "offset": offset}
+
+@app.get("/v1/runs/{run_id}")
+async def get_run(run_id: str, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    async with SessionLocal() as s:
+        r = await s.get(Run, uuid.UUID(run_id))
+        if not r: raise HTTPException(404,"not found")
+        if str(r.tenant_id) != tenant["id"]: raise HTTPException(403,"forbidden")
+        return {"id": run_id, "status": r.status, "output": r.output, "created_at": r.created_at.isoformat()}
+
+# RAG endpoints
+@app.post("/v1/collections/{collection}/docs")
+async def upsert_doc(collection: str, body: dict, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    from .tools.builtin_rag import rag_upsert
+    doc_id=body.get("doc_id"); text=body.get("text"); metadata=body.get("metadata") or {}
+    if not doc_id or not text: raise HTTPException(400,"doc_id and text required")
+    await rag_upsert(tenant_id=tenant["id"], collection=collection, doc_id=doc_id, text=text, metadata=metadata)
+    return {"ok": True}
+
+@app.get("/v1/collections/{collection}/search")
+async def search_collection(collection: str, q: str = Query(...), k: int = Query(5), tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint); from .tools.builtin_rag import rag_retrieve
+    res=await rag_retrieve(tenant_id=tenant["id"], collection=collection, query=q, k=k); return {"results": res}
+
+@app.post("/v1/collections/{collection}/ingest")
+async def ingest_file(collection: str, tenant_hint=Depends(tenant_dep), file: UploadFile = File(...), doc_id: Optional[str] = Form(None), chunk_size: int = Form(1200), chunk_overlap: int = Form(200)):
+    tenant=await resolve_tenant(tenant_hint); content = await file.read()
+    text = extract_text(file.filename, content); idx=0
+    from .tools.builtin_rag import rag_upsert
+    for idx, ch in enumerate(chunk_text(text, chunk_size, chunk_overlap), 1):
+        did = doc_id or file.filename or "upload"
+        await rag_upsert(tenant_id=tenant["id"], collection=collection, doc_id=f"{did}#part{idx}", text=ch, metadata={"source":"upload","file":file.filename})
+    return {"ok": True, "chunks": idx}
+
+# Cloud ingestion triggers (editor/admin roles)
+@app.post("/v1/collections/{collection}/ingest/s3")
+async def trigger_ingest_s3(collection: str, body: dict, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    bucket = body.get("bucket"); prefix = body.get("prefix",""); size=int(body.get("chunk_size",1200)); ov=int(body.get("chunk_overlap",200))
+    if not bucket: raise HTTPException(400, "bucket required")
+    res = ingest_s3_task.delay(tenant["id"], collection, bucket, prefix, size, ov); return {"queued": True, "task_id": res.id}
+
+@app.post("/v1/collections/{collection}/ingest/gcs")
+async def trigger_ingest_gcs(collection: str, body: dict, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    bucket = body.get("bucket"); prefix = body.get("prefix",""); size=int(body.get("chunk_size",1200)); ov=int(body.get("chunk_overlap",200))
+    if not bucket: raise HTTPException(400, "bucket required")
+    res = ingest_gcs_task.delay(tenant["id"], collection, bucket, prefix, size, ov); return {"queued": True, "task_id": res.id}
+
+@app.get("/v1/admin/tenants", dependencies=[Depends(require_admin)])
+async def list_tenants():
+    from .db.session import SessionLocal
+    async with SessionLocal() as s:
+        res = await s.execute(
+            """SELECT id, name, created_at FROM tenants ORDER BY created_at DESC"""
+        )
+        return [
+            {"id": str(r[0]), "name": r[1], "created_at": r[2].isoformat()}
+            for r in res
+        ]
+
+@app.post("/v1/admin/tenants", dependencies=[Depends(require_admin)])
+async def admin_create_tenant(body: dict):
+    name=body.get("name"); api_key=body.get("api_key"); rate_limit=body.get("rate_limit","100/minute")
+    if not name or not api_key: raise HTTPException(400,"name and api_key required")
+    return await create_tenant(name, api_key, rate_limit)
+
+@app.post("/v1/admin/tenants/{tenant_id}/users", dependencies=[Depends(require_admin)])
+async def admin_create_user(tenant_id: str, body: dict):
+    name=body.get("name") or "key"; api_key=body.get("api_key"); role=body.get("role","viewer")
+    if not api_key: raise HTTPException(400,"api_key required")
+    return await create_tenant_user(tenant_id, name, api_key, role)
+
+@app.get("/v1/admin/tenants/{tenant_id}/users", dependencies=[Depends(require_admin)])
+async def admin_list_users(tenant_id: str):
+    return await list_tenant_users(tenant_id)
+
+@app.delete("/v1/admin/tenants/{tenant_id}/users/{user_id}", dependencies=[Depends(require_admin)])
+async def admin_delete_user(tenant_id: str, user_id: str):
+    return await delete_tenant_user(tenant_id, user_id)
+
+# -------- Versioned RAG (with roles) --------
+@app.post("/v1/collections", tags=["collections"])
+async def api_create_collection(body: dict = Body(...), tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    slug = body.get("slug") or body.get("name")
+    name = body.get("name") or slug
+    if not slug: raise HTTPException(400, "slug or name required")
+    return await ensure_collection(tenant["id"], slug, name)
+
+@app.post("/v1/collections/{slug}/versions", tags=["collections"])
+async def api_bump_version(slug: str, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    return await bump_version(tenant["id"], slug)
+
+@app.post("/v1/collections/{slug}/ingest_v", tags=["collections"])
+async def api_ingest_versioned(slug: str, body: dict = Body(...), tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    col = await ensure_collection(tenant["id"], slug, slug)
+    version = body.get("version", "latest")
+    if version == "latest": version = col["latest_version"]
+    elif isinstance(version, int): pass
+    else: raise HTTPException(400, "version must be int or 'latest'")
+    if not body.get("doc_id") or not body.get("text"): raise HTTPException(400, "doc_id and text required")
+    await upsert_chunk(col["id"], int(version), body["doc_id"], body["text"], body.get("metadata"))
+    return {"ok": True, "collection": slug, "version": int(version)}
+
+@app.get("/v1/collections/{slug}/search_v", tags=["collections"])
+async def api_search_versioned(slug: str, q: str, version: str = "latest", k: int = 5, tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    col = await ensure_collection(tenant["id"], slug, slug)
+    ver = col["latest_version"] if version == "latest" else int(version)
+    results = await retrieve_chunks(col["id"], ver, q, k)
+    return {"results": results, "collection": slug, "version": ver}
+
+# Signed uploads
+@app.post("/v1/uploads/s3/sign", tags=["uploads"])
+async def api_s3_sign(body: dict = Body(...), tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    bucket = body.get("bucket"); key = body.get("key"); expires = int(body.get("expires_seconds", 3600))
+    if not bucket or not key: raise HTTPException(400, "bucket and key required")
+    return s3_sign_post(bucket, key, expires)
+
+@app.post("/v1/uploads/gcs/sign", tags=["uploads"])
+async def api_gcs_sign(body: dict = Body(...), tenant_hint=Depends(tenant_dep)):
+    tenant=await resolve_tenant(tenant_hint)
+    if tenant.get("role") not in ("admin","editor"): raise HTTPException(403, "editor or admin required")
+    bucket = body.get("bucket"); key = body.get("key"); expires = int(body.get("expires_seconds", 3600))
+    if not bucket or not key: raise HTTPException(400, "bucket and key required")
+    return gcs_sign_put(bucket, key, expires)
+
+from fastapi import HTTPException, Body
+from .tools import registry as tool_registry  # wherever your registry lives
+
+@app.get("/v1/tools")
+async def list_tools():
+    # minimal listing
+    return sorted(tool_registry.keys())
+
+@app.post("/v1/tools/{name}")
+async def call_tool(name: str, payload: dict = Body(...)):
+    tool_fn = tool_registry.get(name)
+    if not tool_fn:
+        raise HTTPException(status_code=404, detail=f"Unknown tool '{name}'")
+    # Tools are async; call with kwargs from payload
+    try:
+        result = await tool_fn(**payload)
+    except TypeError as e:
+        raise HTTPException(status_code=400, detail=f"Bad args for '{name}': {e}")
+    return {"tool": name, "output": result}
+

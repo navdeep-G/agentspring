@@ -1,0 +1,49 @@
+image:
+  repository: your-dockerhub/agentspring
+  tag: latest
+  pullPolicy: IfNotPresent
+
+consoleImage:
+  repository: your-dockerhub/agentspring-console
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+workerReplicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8000
+consoleService:
+  type: ClusterIP
+  port: 80
+
+env:
+  OPENAI_API_KEY: ""
+  AZURE_OPENAI_API_KEY: ""
+  AZURE_OPENAI_ENDPOINT: ""
+  ANTHROPIC_API_KEY: ""
+  ADMIN_API_KEY: "super-admin"
+  API_KEY: ""
+  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/agentspring"
+  REDIS_URL: "redis://redis:6379/0"
+  CORS_ALLOWED_ORIGINS: "http://localhost:8080"
+  ALLOWLIST_DOMAINS: ""
+  OIDC_ISSUER: ""
+  OIDC_AUDIENCE: ""
+  REQUIRE_OIDC: "false"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: agentspring.local
+  tls: false
+
+resources: {}
+consoleResources: {}
+
+postgres:
+  enabled: false
+redis:
+  enabled: false
