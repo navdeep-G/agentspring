@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentspring.fullname" . }}-app
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: {{ include "agentspring.name" . }}, component: app }
+  template:
+    metadata:
+      labels: { app: {{ include "agentspring.name" . }}, component: app }
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $k, $v in .Values.env }}
+            - name: {{ $k }}
+              value: "{{ $v }}"
+            {{- end }}
+          ports: [{ containerPort: 8000 }]
+          command: ["python","server.py"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentspring.fullname" . }}-app
+spec:
+  type: {{ .Values.service.type }}
+  selector: { app: {{ include "agentspring.name" . }}, component: app }
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8000
+      name: http
