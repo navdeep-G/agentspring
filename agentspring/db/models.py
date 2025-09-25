@@ -1,9 +1,8 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, JSON, Integer, Text, UniqueConstraint
+from sqlalchemy import String, DateTime, ForeignKey, JSON, Integer, Text, UniqueConstraint, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from pgvector.sqlalchemy import Vector
 from .session import Base
 
 def now() -> datetime:
@@ -48,16 +47,14 @@ class ToolCall(Base):
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
 
-class Embedding(Base):
-    __tablename__ = "embeddings"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"))
-    collection: Mapped[str] = mapped_column(String(200))
-    doc_id: Mapped[str] = mapped_column(String(200))
-    embedding: Mapped[list] = mapped_column(Vector(1536))
-    content: Mapped[str] = mapped_column(Text)
-    # Use attribute name 'meta', but DB column named 'metadata'
-    meta: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
-
-    __table_args__ = (UniqueConstraint("tenant_id", "collection", "doc_id", name="uq_doc"),)
+class Example(Base):
+    __tablename__ = "examples"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    def __repr__(self) -> str:
+        return f"<Example {self.name}>"

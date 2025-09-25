@@ -1,38 +1,39 @@
-# agentspring/config.py
-from __future__ import annotations
+from functools import lru_cache
 from typing import Optional
-from pydantic import Field
+from pydantic import PostgresDsn, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Read .env if present, accept unknown keys, and treat env names case-insensitively
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-        extra="ignore",
-    )
+    # Application
+    APP_NAME: str = "AgentSpring"
+    DEBUG: bool = False
+    ENVIRONMENT: str = "development"
 
-    # --- Core ---
-    DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@db:5432/agentspring"
-    )
-    REDIS_URL: str = Field(default="redis://redis:6379/0")
+    # API
+    API_V1_PREFIX: str = "/api/v1"
+    SECRET_KEY: str = "your-secret-key-here"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/agentspring"
+    SYNC_DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/agentspring"
+    TEST_DATABASE_URL: Optional[str] = None
+
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # CORS
+    CORS_ORIGINS: list[str] = ["*"]
 
     # Single-tenant dev mode or multi-tenant admin
-    API_KEY: Optional[str] = None
+    API_KEY: str = "test-api-key"
     ADMIN_API_KEY: Optional[str] = None
 
     # --- Providers / Models ---
-    DEFAULT_PROVIDER: str = "openai"
-    OPENAI_API_KEY: Optional[str] = None
-    MODEL: str = "gpt-4o-mini"
+    DEFAULT_PROVIDER: str = "mock"
+    MODEL: str = "mock"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
-
-    # Azure OpenAI
-    AZURE_OPENAI_ENDPOINT: Optional[str] = None
-    AZURE_OPENAI_API_KEY: Optional[str] = None
-    AZURE_OPENAI_API_VERSION: Optional[str] = None
 
     # Anthropic
     ANTHROPIC_API_KEY: Optional[str] = None
@@ -65,6 +66,27 @@ class Settings(BaseSettings):
     AGENTSPRING_APP: Optional[str] = None
     CUSTOMER_SUPPORT_AGENT_API_KEY: Optional[str] = None
 
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-settings = Settings()
+    @validator("DATABASE_URL")
+    def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        return str(
+            PostgresDsn.build(
+                scheme="postgresql+asyncpg",
+                username=values.get("POSTGRES_USER", "postgres"),
+                password=values.get("POSTGRES_PASSWORD", "postgres"),
+                host=values.get("POSTGRES_SERVER", "postgres"),
+                path=f"/{values.get('POSTGRES_DB', 'agentspring') or ''}",
+            )
+        )
 
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
+
+
+# Global settings instance
+settings = get_settings()

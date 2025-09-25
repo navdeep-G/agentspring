@@ -507,3 +507,146 @@ async def delegate_agent(prompt: str, provider: str="mock", stream: bool=False,
 ## License
 
 This repository is open source. See `LICENSE` for details.
+
+---
+
+# AgentSpring
+
+AgentSpring is a lightweight, infrastructure-focused framework for building agentic applications. It provides the core infrastructure needed to build, deploy, and manage AI agents, while allowing you to bring your own LLM server and toolchain logic.
+
+## Features
+
+- 🏗️ **Infrastructure-First**: Focus on the infrastructure layer, not the AI models
+- 🔌 **Pluggable Architecture**: Easily integrate any LLM provider or tool
+- 🚀 **FastAPI-Powered**: Built on top of FastAPI for high performance
+- 🔒 **Secure**: Built-in API key authentication
+- 📦 **Docker-Ready**: Containerized deployment with Docker
+- 📊 **Observability**: Built-in logging and monitoring
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Docker & Docker Compose
+- PostgreSQL
+- Redis
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/agentspring.git
+   cd agentspring
+   ```
+
+2. Create a `.env` file:
+   ```env
+   # Database
+   DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/agentspring
+   
+   # Redis
+   REDIS_URL=redis://localhost:6379/0
+   
+   # Security
+   SECRET_KEY=your-secret-key-here
+   API_KEY=your-api-key-here
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Run the database migrations:
+   ```bash
+   alembic upgrade head
+   ```
+
+### Running the Server
+
+```bash
+uvicorn agentspring.main:app --reload
+```
+
+Or with Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+## Creating Your First Agent
+
+Create a new Python file for your agent:
+
+```python
+from typing import List
+from pydantic import BaseModel
+
+from agentspring.core.agent import BaseAgent, AgentMessage, AgentResult
+from agentspring.services.registry import register_agent
+
+class MyAgentConfig(BaseModel):
+    greeting: str = "Hello"
+
+@register_agent("my_agent")
+class MyAgent(BaseAgent[MyAgentConfig]):
+    """A simple agent that greets the user."""
+    
+    @classmethod
+    def get_default_config(cls) -> MyAgentConfig:
+        return MyAgentConfig()
+    
+    async def execute(
+        self, 
+        messages: List[AgentMessage],
+        **kwargs
+    ) -> AgentResult:
+        name = messages[-1].content if messages else "there"
+        return AgentResult(content=f"{self.config.greeting}, {name}!")
+```
+
+## API Documentation
+
+Once the server is running, you can access the following endpoints:
+
+- `GET /health` - Health check
+- `GET /docs` - Interactive API documentation (Swagger UI)
+- `GET /redoc` - Alternative API documentation (ReDoc)
+- `POST /api/v1/agents/execute` - Execute an agent
+- `GET /api/v1/agents` - List all registered agents
+
+## Example Request
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/execute \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
+  -d '{
+    "agent_name": "echo",
+    "messages": [
+      {"role": "user", "content": "Hello, AgentSpring!"}
+    ]
+  }'
+```
+
+## Development
+
+### Running Tests
+
+```bash
+pytest
+```
+
+### Code Style
+
+This project uses `black` for code formatting and `ruff` for linting.
+
+```bash
+black .
+ruff check .
+```
+
+## License
+
+MIT

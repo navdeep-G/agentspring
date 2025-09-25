@@ -71,23 +71,23 @@ class ToolRegistry:
 # Global registry instance exposed to the rest of the app
 tool_registry = ToolRegistry(_fn_map, _schema_map)
 
+# agentspring/tools/__init__.py
+from typing import Callable, Dict, Any, List
+from ..models import ToolDefinition
 
-def tool(name: str, description: str = "", parameters: dict | None = None):
-    """
-    Decorator to register a tool with schema.
-    Usage:
-        @tool("math_eval", "Evaluate arithmetic", parameters={...})
-        async def math_eval(expr: str) -> float: ...
-    """
-    def _wrap(fn: Callable[..., Awaitable[Any]]):
-        _fn_map[name] = fn
-        _schema_map[name] = {
-            "name": name,
-            "description": description or "",
-            "parameters": parameters or {"type": "object", "properties": {}, "required": []},
-        }
-        return fn
-    return _wrap
+def tool(name: str, description: str, parameters: Dict[str, Any] = None):
+    def decorator(func: Callable):
+        # Register the tool with the global registry
+        from ..llm.registry import registry
+        tool_def = ToolDefinition(
+            name=name,
+            description=description,
+            parameters=parameters or {},
+            handler=func
+        )
+        registry.register_tool(tool_def)
+        return func
+    return decorator
 
 
 # Back-compat names some code may import
