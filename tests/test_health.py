@@ -1,9 +1,17 @@
+"""Test the health check endpoint."""
 import os
 from fastapi.testclient import TestClient
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/agentspring")
+
+# Set up test environment variables
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
-from agentspring.api import app  # noqa
+
+# Import the FastAPI app
+from agentspring.api import app
+
 def test_health():
-    c = TestClient(app)
-    r = c.get("/health")
-    assert r.status_code == 200 and r.json()["ok"] is True
+    """Test the health check endpoint."""
+    client = TestClient(app)
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
