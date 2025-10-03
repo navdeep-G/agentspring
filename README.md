@@ -65,9 +65,83 @@ response = await agent.execute([{"role": "user", "content": "Hi!"}])
 print(response.content)
 ```
 
-## 📚 Documentation
+## 🐳 Running with Docker
 
-For detailed documentation, please visit our [Documentation Site](https://docs.agentspring.ai).
+AgentSpring can be easily run using Docker and Docker Compose. This will set up all necessary services including PostgreSQL and Redis.
+
+### Prerequisites
+- Docker and Docker Compose installed on your system
+
+---
+
+### Quick Start
+
+1. **Start all services** (PostgreSQL, Redis, and AgentSpring):
+
+  ```bash
+  docker-compose up -d
+  ```
+
+2. **Check the logs to ensure everything is running**:
+
+  ```bash
+  docker-compose logs -f
+  ```
+3. **Access the API at**:
+
+  ```bash
+  http://localhost:8000
+  ```
+
+### Useful Commands
+
+**Stop all services**:
+
+  ```bash
+  docker-compose down
+  ```
+
+**Run a command in the app container**:
+
+  ```bash
+docker-compose run --rm app [your-command]
+```
+
+**Access the database**:
+
+  ```bash
+docker-compose exec postgres psql -U postgres -d agentspring
+```
+
+
+**View Redis**:
+
+```bash
+docker-compose exec redis redis-cli
+```
+
+
+**Rebuild the application (after Dockerfile changes)**:
+
+```bash
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+**Environment Variables**
+
+The following environment variables can be configured in the docker-compose.yml file:
+
+```bash
+DATABASE_URL: PostgreSQL connection string
+
+REDIS_URL: Redis connection URL
+
+SECRET_KEY: Secret key for cryptographic operations
+
+API_KEY: API key for authentication
+```
+
 
 ## 🛣️ Roadmap
 
