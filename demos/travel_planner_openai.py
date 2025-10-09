@@ -11,7 +11,7 @@ from openai import AsyncOpenAI
 # Import from agentspring
 from agentspring.core.agent import BaseAgent
 from agentspring.core.extensions import Tool
-from agentspring.core.context import Context
+from agentspring.core.base import Context
 
 # Initialize OpenAI client
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
