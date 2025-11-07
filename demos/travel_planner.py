@@ -205,7 +205,6 @@ class TravelPlannerAgent(BaseAgent):
     async def execute(self, messages: List[Message], context: Optional[Dict] = None) -> Message:
         # Extract travel details from user message
         user_request = messages[-1].content.lower()
-        print(user_request)
         
         # Simple intent detection
         if "plan a trip" in user_request or "book travel" in user_request:
