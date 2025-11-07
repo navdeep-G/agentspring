@@ -1,6 +1,5 @@
 # AgentSpring: A Framework for Building AI Agents
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker)](https://www.docker.com/)
 
@@ -110,10 +109,6 @@ print(response.content)
    python travel_planner.py
    ```
 
-## 📚 Documentation
-
-For detailed documentation, please visit our [documentation site](https://agentspring.dev/docs).
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
@@ -123,13 +118,3 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👏 Acknowledgments
-
-- Built with ❤️ using FastAPI, SQLAlchemy, and Pydantic
-- Inspired by the latest advancements in AI and agent-based systems
-- Special thanks to all our contributors!
