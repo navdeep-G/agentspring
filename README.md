@@ -118,3 +118,105 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+## 🛣️ Roadmap
+
+### Q4 2025 - Core Stability & Security
+- [x] Base agent framework
+- [x] Tool system
+- [x] Plugin architecture
+- [x] Basic API endpoints
+- [ ] **Production Security**
+  - [ ] Rate limiting and throttling
+  - [ ] API key rotation and management
+  - [ ] Input validation and sanitization
+  - [ ] CORS and security headers
+  - [ ] Audit logging
+- [ ] **Observability**
+  - [ ] Structured logging
+  - [ ] Metrics collection (Prometheus)
+  - [ ] Distributed tracing (OpenTelemetry)
+  - [ ] Health check endpoints
+
+### Q1 2026 - Enhanced Capabilities & Scalability
+- [ ] **Advanced Workflow Engine**
+  - [ ] DAG-based workflows
+  - [ ] Conditional branching
+  - [ ] Error handling and retries
+  - [ ] Timeouts and circuit breakers
+- [ ] **State Management**
+  - [ ] Persistent workflow state
+  - [ ] Checkpointing and resumability
+  - [ ] Distributed locking
+- [ ] **Scalability**
+  - [ ] Horizontal scaling support
+  - [ ] Load balancing
+  - [ ] Connection pooling
+  - [ ] Background task processing
+
+### Q2 2026 - Enterprise Features
+- [ ] **Authentication & Authorization**
+  - [ ] OAuth2/OIDC integration
+  - [ ] Role-based access control (RBAC)
+  - [ ] Fine-grained permissions
+  - [ ] Multi-tenancy support
+- [ ] **Data Management**
+  - [ ] Data versioning
+  - [ ] Backup and restore
+  - [ ] Data retention policies
+  - [ ] Export/import functionality
+- [ ] **High Availability**
+  - [ ] Database replication
+  - [ ] Failover mechanisms
+  - [ ] Blue-green deployments
+  - [ ] Zero-downtime updates
+
+### Q3 2026 - Developer Experience & Ecosystem
+- [ ] **Developer Tools**
+  - [ ] CLI for management
+  - [ ] Local development environment
+  - [ ] Testing framework
+  - [ ] Code generation
+- [ ] **Documentation**
+  - [ ] API reference
+  - [ ] User guides
+  - [ ] Tutorials
+  - [ ] Example projects
+- [ ] **Integration Ecosystem**
+  - [ ] Plugin marketplace
+  - [ ] Webhooks
+  - [ ] WebSocket support
+  - [ ] gRPC interface
+
+### Q4 2026 - Advanced Features & Optimization
+- [ ] **Performance**
+  - [ ] Caching layer
+  - [ ] Query optimization
+  - [ ] Memory management
+  - [ ] Async I/O optimization
+- [ ] **AI/ML Enhancements**
+  - [ ] Model versioning
+  - [ ] A/B testing
+  - [ ] Feedback loops
+  - [ ] Automated evaluation
+- [ ] **Compliance**
+  - [ ] GDPR compliance
+  - [ ] Data encryption at rest/transit
+  - [ ] Compliance documentation
+  - [ ] Audit trails
+
+### Future Considerations
+- [ ] **Edge Computing**
+  - [ ] Lightweight runtime
+  - [ ] Offline capabilities
+  - [ ] Edge synchronization
+- [ ] **Advanced Analytics**
+  - [ ] Usage analytics
+  - [ ] Performance metrics
+  - [ ] Cost tracking
+  - [ ] Anomaly detection
+- [ ] **Community & Support**
+  - [ ] Community forum
+  - [ ] Commercial support
+  - [ ] Training programs
+  - [ ] Certification
