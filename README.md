@@ -249,7 +249,3 @@ API_KEY: API key for authentication
 
 We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
 
-## 📄 License
-
-AgentSpring is licensed under the [MIT License](LICENSE).
-
