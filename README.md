@@ -244,8 +244,3 @@ API_KEY: API key for authentication
   - [ ] Commercial support
   - [ ] Training programs
   - [ ] Certification
-
-## 🤝 Contributing
-
-We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
-
