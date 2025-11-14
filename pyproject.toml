@@ -85,20 +85,20 @@ ignore_missing_imports = true
 follow_imports = "skip"
 follow_imports_for_stub_files = false
 
-[mypy-sqlalchemy.*]
+[mypy."sqlalchemy.*"]
 ignore_missing_imports = true
 
-[mypy-alembic.*]
+[mypy."alembic.*"]
 ignore_missing_imports = true
 
-[mypy-fastapi_limiter.*]
+[mypy."fastapi_limiter.*"]
 ignore_missing_imports = true
 
-[mypy-redis.*]
+[mypy."redis.*"]
 ignore_missing_imports = true
 
-[mypy-celery.*]
+[mypy."celery.*"]
 ignore_missing_imports = true
 
-[mypy-pydantic.*]
+[mypy."pydantic.*"]
 ignore_missing_imports = true
