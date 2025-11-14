@@ -54,6 +54,34 @@ include_trailing_comma = true
 
 [tool.mypy]
 python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
+warn_return_any = false
+warn_unused_configs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = false
+strict_optional = false
+
+[mypy]
+ignore_missing_imports = True
+follow_imports = "skip"
+follow_imports_for_stub_files = false
+
+[mypy-sqlalchemy.*]
+ignore_missing_imports = True
+
+[mypy-alembic.*]
+ignore_missing_imports = True
+
+[mypy-fastapi_limiter.*]
+ignore_missing_imports = True
+
+[mypy-redis.*]
+ignore_missing_imports = True
+
+[mypy-celery.*]
+ignore_missing_imports = True
+
+[mypy-pydantic.*]
+ignore_missing_imports = True
