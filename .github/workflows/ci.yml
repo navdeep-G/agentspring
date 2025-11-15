@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+        
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+        
+    - name: Set up environment variables
+      run: |
+        echo "DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
+        echo "TESTING=True" >> $GITHUB_ENV
+        
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ --cov=agentspring --cov-report=xml --cov-report=term -v
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+        TESTING: "True"
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: success() || failure()
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        
+    - name: Run type checking
+      run: |
+        mypy agentspring/ --show-error-codes
+      continue-on-error: true
+      
+    - name: Check code formatting
+      run: |
+        black --check agentspring/ tests/
+        isort --check-only agentspring/ tests/
+      continue-on-error: true
+        
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 agentspring/ tests/
+      continue-on-error: true
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+        
+    - name: Build package
+      run: |
+        python -m build
+        
+    - name: Verify built package
+      run: |
+        pip install dist/*.whl
+        agentspring --version || true
