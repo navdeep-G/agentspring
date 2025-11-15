@@ -3,6 +3,7 @@ Test script for the AgentSpring plugin system.
 """
 import asyncio
 import sys
+import pytest
 from pathlib import Path
 from agentspring.plugin import PluginManager
 
@@ -15,6 +16,7 @@ def print_plugin_info(plugin):
     print(f"State: {plugin.state}")
     print(f"Dependencies: {plugin.dependencies}")
 
+@pytest.mark.asyncio
 async def test_plugin_system():
     """Test the plugin system."""
     # Create plugin manager
@@ -48,8 +50,4 @@ async def test_plugin_system():
             
         except Exception as e:
             print(f"Error testing plugin {plugin_name}: {str(e)}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-
-if __name__ == "__main__":
-    asyncio.run(test_plugin_system())
+            raise
