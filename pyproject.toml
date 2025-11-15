@@ -11,6 +11,13 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
     "pydantic>=2.0.0,<3.0.0",
     "typing-extensions>=4.0.0",
@@ -25,7 +32,8 @@ dependencies = [
     "celery>=5.3.0",
     "prometheus-client>=0.17.0",
     "python-jose[cryptography]>=3.3.0",
-    "beautifulsoup4>=4.12.0"
+    "beautifulsoup4>=4.12.0",
+    "packaging>=21.0.0"
 ]
 
 [project.optional-dependencies]
@@ -50,18 +58,18 @@ dev = [
     "types-pytz>=2022.7.0"
 ]
 
-[tool.setuptools]
-packages = [
-    "agentspring",
-    "agentspring.core",
-    "agentspring.plugins",
-    "agentspring.plugins.example"
-]
+[project.urls]
+Homepage = "https://github.com/navdeep-G/agentspring"
+"Bug Tracker" = "https://github.com/navdeep-G/agentspring/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentspring*"]
 
 [tool.black]
 line-length = 88
 target-version = ["py39"]
-include = '\\.pyi?$'
+include = "\\.pyi?$"
 
 [tool.isort]
 profile = "black"
@@ -72,33 +80,5 @@ include_trailing_comma = true
 [tool.mypy]
 python_version = "3.9"
 warn_return_any = false
-warn_unused_configs = false
 disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = false
-disallow_untyped_decorators = false
-no_implicit_optional = false
-strict_optional = false
-
-[mypy]
-ignore_missing_imports = true
-follow_imports = "skip"
-follow_imports_for_stub_files = false
-
-[mypy."sqlalchemy.*"]
-ignore_missing_imports = true
-
-[mypy."alembic.*"]
-ignore_missing_imports = true
-
-[mypy."fastapi_limiter.*"]
-ignore_missing_imports = true
-
-[mypy."redis.*"]
-ignore_missing_imports = true
-
-[mypy."celery.*"]
-ignore_missing_imports = true
-
-[mypy."pydantic.*"]
 ignore_missing_imports = true
