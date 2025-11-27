@@ -135,10 +135,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 - [ ] ~~Plugin architecture~~ (Partially implemented)
   - ✅ Basic plugin structure exists
-  - [ ] Missing: Dynamic loading/unloading
-  - [ ] Missing: Dependency management
-  - [ ] Missing: Version compatibility
-  - [ ] Missing: Plugin isolation
+  - [ ] Dynamic loading/unloading
+  - [ ] Dependency management
+  - [ ] Version compatibility
+  - [ ] Plugin isolation
 
 - [x] Basic API endpoints
   - ✅ FastAPI-based REST API
