@@ -73,7 +73,7 @@ agentspring/
 
 3. Access the API at `http://localhost:8000`
 
-## 🧑‍💻 Basic Usage
+## Basic Usage
 
 ### Creating a Simple Agent
 
